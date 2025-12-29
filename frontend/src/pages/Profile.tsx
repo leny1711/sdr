@@ -109,6 +109,7 @@ const Profile: React.FC = () => {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                autoComplete="name"
               />
             </div>
 
