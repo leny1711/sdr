@@ -34,7 +34,10 @@ export class DiscoveryController {
 
       return res.status(200).json({
         success: true,
-        data: result,
+        data: {
+          matched: !!result.match,
+          matchId: result.match?.id,
+        },
         message: result.match ? 'It\'s a match!' : 'Like sent',
       });
     } catch (error) {

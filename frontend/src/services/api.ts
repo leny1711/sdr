@@ -75,12 +75,12 @@ export const discoveryAPI = {
   },
 
   like: async (userId: string): Promise<{ matched: boolean; matchId?: string }> => {
-    const response = await api.post('/api/discovery/like', { likedUserId: userId });
+    const response = await api.post('/api/discovery/like', { toUserId: userId });
     return response.data.data;
   },
 
   dislike: async (userId: string): Promise<void> => {
-    await api.post('/api/discovery/dislike', { dislikedUserId: userId });
+    await api.post('/api/discovery/dislike', { toUserId: userId });
   },
 };
 
