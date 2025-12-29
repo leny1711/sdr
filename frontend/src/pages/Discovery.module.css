@@ -1,0 +1,86 @@
+.discoveryContainer {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  position: relative;
+}
+
+.profilePage {
+  max-width: var(--max-text-width);
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.counter {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+.profileContent {
+  flex: 1;
+  margin-bottom: var(--spacing-xl);
+}
+
+.meta {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xl);
+}
+
+.description {
+  white-space: pre-wrap;
+  line-height: var(--line-height-body);
+  font-size: 1.125rem;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
+}
+
+.actions button {
+  flex: 1;
+}
+
+.matchOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.matchBox {
+  background-color: var(--bg-primary);
+  padding: var(--spacing-xl);
+  max-width: 400px;
+  text-align: center;
+  border: 2px solid var(--text-primary);
+}
+
+.matchBox h2 {
+  margin-bottom: var(--spacing-md);
+}
+
+.matchBox button {
+  margin-top: var(--spacing-lg);
+}

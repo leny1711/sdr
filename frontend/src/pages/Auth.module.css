@@ -1,0 +1,51 @@
+.authBox {
+  max-width: 500px;
+  margin: var(--spacing-xl) auto;
+  padding: var(--spacing-xl);
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-primary);
+}
+
+.form {
+  margin-top: var(--spacing-lg);
+}
+
+.formGroup {
+  margin-bottom: var(--spacing-md);
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.formGroup input,
+.formGroup textarea,
+.formGroup select {
+  width: 100%;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.submitBtn {
+  width: 100%;
+  margin-top: var(--spacing-md);
+}
+
+.error {
+  padding: var(--spacing-sm);
+  background-color: #FEE;
+  border: 1px solid #C33;
+  color: #C33;
+  margin-bottom: var(--spacing-md);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
