@@ -61,7 +61,38 @@ cp .env.example .env
 
 ### Database Setup
 
-Database schema and migrations will be set up in STEP 2.
+1. Generate Prisma Client:
+```bash
+npm run prisma:generate
+```
+
+2. Run database migrations:
+```bash
+npm run prisma:migrate
+```
+
+This will create all required tables:
+- **users** - User accounts and profiles
+- **likes** - Like/dislike tracking for discovery
+- **conversations** - Chat conversations between matched users
+- **messages** - Text and voice messages (with MessageType enum: TEXT, VOICE)
+- **blocks** - User blocking for safety
+- **reports** - User reporting system
+
+3. (Optional) Open Prisma Studio to view/manage data:
+```bash
+npm run prisma:studio
+```
+
+### Database Schema
+
+All models are defined in `prisma/schema.prisma`:
+- **User**: email, passwordHash, username, age, city, description (TEXT), photoUrl, isActive
+- **Like**: likerId, likedId (for matching system)
+- **Conversation**: userAId, userBId (one-to-one between matched users)
+- **Message**: conversationId, senderId, type (TEXT/VOICE), content, audioUrl, audioDuration
+- **Block**: blockerId, blockedId
+- **Report**: reporterId, reportedId, reason
 
 ## Development
 
@@ -129,8 +160,15 @@ Additional endpoints will be added in subsequent steps:
 - Environment variables configured
 - Server verified and running without errors
 
+**STEP 2**: ✅ Database schema & migrations - COMPLETE
+- Prisma schema created with all models (User, Like, Conversation, Message, Block, Report)
+- PostgreSQL database configured
+- Prisma Client generated
+- Initial migrations created and applied successfully
+- All database tables created with proper indexes and foreign keys
+- Database connection tested and verified
+
 **Next Steps**:
-- STEP 2: Database schema & migrations (Prisma)
 - STEP 3: Authentication (JWT)
 - STEP 4: Profile API
 - And more...

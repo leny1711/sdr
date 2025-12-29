@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { prisma } from './lib/prisma';
 
 // Load environment variables
 dotenv.config();
@@ -29,12 +30,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
-app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-  });
+app.get('/health', async (_req: Request, res: Response) => {
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({
+      status: 'ok',
+      message: 'Server is running',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      message: 'Server is running but database is not connected',
+      database: 'disconnected',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // API Routes
