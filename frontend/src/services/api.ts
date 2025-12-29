@@ -31,17 +31,17 @@ api.interceptors.request.use((config) => {
 export const authAPI = {
   register: async (data: RegisterData): Promise<AuthResponse> => {
     const response = await api.post('/api/auth/register', data);
-    return response.data;
+    return response.data.data;
   },
 
   login: async (data: LoginData): Promise<AuthResponse> => {
     const response = await api.post('/api/auth/login', data);
-    return response.data;
+    return response.data.data;
   },
 
   getMe: async (): Promise<User> => {
     const response = await api.get('/api/auth/me');
-    return response.data;
+    return response.data.data;
   },
 };
 
@@ -50,12 +50,12 @@ export const userAPI = {
   getProfile: async (userId?: string): Promise<User> => {
     const url = userId ? `/api/users/profile/${userId}` : '/api/users/profile';
     const response = await api.get(url);
-    return response.data;
+    return response.data.data;
   },
 
   updateProfile: async (data: Partial<User>): Promise<User> => {
     const response = await api.put('/api/users/profile', data);
-    return response.data;
+    return response.data.data;
   },
 
   deactivate: async (): Promise<void> => {
@@ -71,12 +71,12 @@ export const userAPI = {
 export const discoveryAPI = {
   getUsers: async (): Promise<User[]> => {
     const response = await api.get('/api/discovery');
-    return response.data;
+    return response.data.data;
   },
 
   like: async (userId: string): Promise<{ matched: boolean; matchId?: string }> => {
     const response = await api.post('/api/discovery/like', { likedUserId: userId });
-    return response.data;
+    return response.data.data;
   },
 
   dislike: async (userId: string): Promise<void> => {
@@ -88,7 +88,7 @@ export const discoveryAPI = {
 export const matchAPI = {
   getMatches: async (): Promise<Match[]> => {
     const response = await api.get('/api/matches');
-    return response.data;
+    return response.data.data;
   },
 };
 
@@ -96,12 +96,12 @@ export const matchAPI = {
 export const conversationAPI = {
   getConversation: async (conversationId: string): Promise<ConversationWithMessages> => {
     const response = await api.get(`/api/conversations/${conversationId}`);
-    return response.data;
+    return response.data.data;
   },
 
   getMessages: async (conversationId: string): Promise<Message[]> => {
     const response = await api.get(`/api/conversations/${conversationId}/messages`);
-    return response.data;
+    return response.data.data;
   },
 };
 
@@ -109,12 +109,12 @@ export const conversationAPI = {
 export const messageAPI = {
   sendText: async (conversationId: string, content: string): Promise<Message> => {
     const response = await api.post('/api/messages/text', { conversationId, content });
-    return response.data;
+    return response.data.data;
   },
 
   sendVoice: async (conversationId: string, audioUrl: string): Promise<Message> => {
     const response = await api.post('/api/messages/voice', { conversationId, audioUrl });
-    return response.data;
+    return response.data.data;
   },
 };
 
@@ -130,7 +130,7 @@ export const blockAPI = {
 
   getBlocked: async (): Promise<User[]> => {
     const response = await api.get('/api/blocks');
-    return response.data;
+    return response.data.data;
   },
 };
 

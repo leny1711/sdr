@@ -6,7 +6,8 @@ import { validate } from '../middlewares/validation.middleware';
 
 const router = Router();
 
-router.get('/profile/:userId?', authenticate, UserController.getProfile);
+router.get('/profile/:userId', authenticate, UserController.getProfile);
+router.get('/profile', authenticate, UserController.getProfile);
 
 router.put(
   '/profile',
