@@ -1,14 +1,23 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
+import rateLimit from 'express-rate-limit';
 import { UserController } from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validation.middleware';
-import { rateLimiter } from '../middlewares/rateLimit.middleware';
 
 const router = Router();
 
-router.get('/profile', authenticate, rateLimiter, UserController.getProfile);
-router.get('/profile/:userId', authenticate, rateLimiter, UserController.getProfile);
+// Rate limiter for profile routes - 100 requests per 15 minutes
+const profileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { success: false, error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.get('/profile', authenticate, profileLimiter, UserController.getProfile);
+router.get('/profile/:userId', authenticate, profileLimiter, UserController.getProfile);
 
 router.put(
   '/profile',
