@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { conversationAPI, messageAPI } from '../services/api';
 import { socketService } from '../services/socket';
@@ -19,27 +19,14 @@ const Chat: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!conversationId) return;
+  const calculateRevealLevel = useCallback((count: number): number => {
+    if (count >= 30) return 3;
+    if (count >= 20) return 2;
+    if (count >= 10) return 1;
+    return 0;
+  }, []);
 
-    loadConversation();
-    socketService.joinConversation(conversationId);
-
-    socketService.onNewMessage(handleNewMessage);
-    socketService.onTyping(handleTyping);
-
-    return () => {
-      socketService.leaveConversation(conversationId);
-      socketService.off('message:new');
-      socketService.off('typing:user');
-    };
-  }, [conversationId]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const loadConversation = async () => {
+  const loadConversation = useCallback(async () => {
     if (!conversationId) return;
 
     try {
@@ -52,38 +39,51 @@ const Chat: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [conversationId]);
 
-  const handleNewMessage = (message: Message) => {
-    setMessages((prev) => [...prev, message]);
-    
-    // Update text message count if it's a text message
-    if (message.type === 'TEXT' && conversation) {
-      setConversation((prev) => {
-        if (!prev) return prev;
-        const newCount = prev.textMessageCount + 1;
-        const newRevealLevel = calculateRevealLevel(newCount);
-        return {
-          ...prev,
-          textMessageCount: newCount,
-          revealLevel: newRevealLevel,
-        };
-      });
-    }
-  };
+  useEffect(() => {
+    if (!conversationId) return;
 
-  const handleTyping = (data: { userId: string; isTyping: boolean }) => {
-    if (data.userId !== user?.id) {
-      setIsTyping(data.isTyping);
-    }
-  };
+    const handleNewMessage = (message: Message) => {
+      setMessages((prev) => [...prev, message]);
+      
+      // Update text message count if it's a text message
+      if (message.type === 'TEXT') {
+        setConversation((prev) => {
+          if (!prev) return prev;
+          const newCount = prev.textMessageCount + 1;
+          const newRevealLevel = calculateRevealLevel(newCount);
+          return {
+            ...prev,
+            textMessageCount: newCount,
+            revealLevel: newRevealLevel,
+          };
+        });
+      }
+    };
 
-  const calculateRevealLevel = (count: number): number => {
-    if (count >= 30) return 3;
-    if (count >= 20) return 2;
-    if (count >= 10) return 1;
-    return 0;
-  };
+    const handleTyping = (data: { userId: string; isTyping: boolean }) => {
+      if (data.userId !== user?.id) {
+        setIsTyping(data.isTyping);
+      }
+    };
+
+    loadConversation();
+    socketService.joinConversation(conversationId);
+
+    socketService.onNewMessage(handleNewMessage);
+    socketService.onTyping(handleTyping);
+
+    return () => {
+      socketService.leaveConversation(conversationId);
+      socketService.off('message:new');
+      socketService.off('typing:user');
+    };
+  }, [conversationId, user?.id, loadConversation, calculateRevealLevel]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -39,8 +39,8 @@ const Register: React.FC = () => {
         age: parseInt(formData.age),
       });
       navigate('/discovery');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to register. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to register. Please try again.');
     } finally {
       setLoading(false);
     }

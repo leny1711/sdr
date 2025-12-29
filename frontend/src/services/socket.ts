@@ -54,7 +54,7 @@ class SocketService {
     this.socket?.emit('typing:stop', { conversationId });
   }
 
-  onConversationJoined(callback: (data: any) => void) {
+  onConversationJoined(callback: (data: { conversationId: string }) => void) {
     this.socket?.on('conversation:joined', callback);
   }
 
@@ -66,11 +66,11 @@ class SocketService {
     this.socket?.on('typing:user', callback);
   }
 
-  onError(callback: (error: any) => void) {
+  onError(callback: (error: { message: string }) => void) {
     this.socket?.on('error', callback);
   }
 
-  off(event: string, callback?: any) {
+  off(event: string, callback?: () => void) {
     this.socket?.off(event, callback);
   }
 }

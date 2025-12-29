@@ -35,8 +35,8 @@ const Profile: React.FC = () => {
       const updatedUser = await userAPI.updateProfile(formData);
       updateUser(updatedUser);
       setIsEditing(false);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update profile.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update profile.');
     } finally {
       setLoading(false);
     }
