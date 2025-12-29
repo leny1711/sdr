@@ -16,8 +16,8 @@ const profileLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.get('/profile', authenticate, profileLimiter, UserController.getProfile);
-router.get('/profile/:userId', authenticate, profileLimiter, UserController.getProfile);
+router.get('/profile', profileLimiter, authenticate, UserController.getProfile);
+router.get('/profile/:userId', profileLimiter, authenticate, UserController.getProfile);
 
 router.put(
   '/profile',
