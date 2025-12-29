@@ -1,0 +1,110 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import apiService from '../services/api';
+import socketService from '../services/socket';
+import { User, LoginRequest, RegisterRequest } from '../types';
+
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  login: (data: LoginRequest) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const TOKEN_KEY = 'auth_token';
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load token on mount
+  useEffect(() => {
+    loadToken();
+  }, []);
+
+  // Connect socket when token changes
+  useEffect(() => {
+    if (token) {
+      socketService.connect(token);
+    } else {
+      socketService.disconnect();
+    }
+  }, [token]);
+
+  const loadToken = async () => {
+    try {
+      const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
+      if (storedToken) {
+        setToken(storedToken);
+        apiService.setToken(storedToken);
+        const currentUser = await apiService.getCurrentUser();
+        setUser(currentUser);
+      }
+    } catch (error) {
+      console.error('Error loading token:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const login = async (data: LoginRequest) => {
+    const response = await apiService.login(data);
+    await SecureStore.setItemAsync(TOKEN_KEY, response.token);
+    setToken(response.token);
+    apiService.setToken(response.token);
+    setUser(response.user);
+  };
+
+  const register = async (data: RegisterRequest) => {
+    const response = await apiService.register(data);
+    await SecureStore.setItemAsync(TOKEN_KEY, response.token);
+    setToken(response.token);
+    apiService.setToken(response.token);
+    setUser(response.user);
+  };
+
+  const logout = async () => {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    setToken(null);
+    apiService.setToken(null);
+    setUser(null);
+    socketService.disconnect();
+  };
+
+  const refreshUser = async () => {
+    if (token) {
+      const currentUser = await apiService.getCurrentUser();
+      setUser(currentUser);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isLoading,
+        login,
+        register,
+        logout,
+        refreshUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
