@@ -7,8 +7,8 @@ import { rateLimiter } from '../middlewares/rateLimit.middleware';
 
 const router = Router();
 
-router.get('/profile', rateLimiter, authenticate, UserController.getProfile);
-router.get('/profile/:userId', rateLimiter, authenticate, UserController.getProfile);
+router.get('/profile', authenticate, rateLimiter, UserController.getProfile);
+router.get('/profile/:userId', authenticate, rateLimiter, UserController.getProfile);
 
 router.put(
   '/profile',
