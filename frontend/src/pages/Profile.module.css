@@ -1,0 +1,74 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.profileContent {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.meta {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.email {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+.description {
+  white-space: pre-wrap;
+  line-height: var(--line-height-body);
+}
+
+.formGroup {
+  margin-bottom: var(--spacing-md);
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
+}
+
+.actions button {
+  flex: 1;
+}
+
+.error {
+  padding: var(--spacing-sm);
+  background-color: #FEE;
+  border: 1px solid #C33;
+  color: #C33;
+  margin-bottom: var(--spacing-md);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}

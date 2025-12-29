@@ -1,0 +1,127 @@
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: var(--max-text-width);
+  margin: 0 auto;
+  background-color: var(--bg-primary);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.headerInfo {
+  flex: 1;
+}
+
+.headerInfo h2 {
+  margin-bottom: 0.25rem;
+  font-size: 1.25rem;
+}
+
+.revealInfo {
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.messagesContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--text-tertiary);
+}
+
+.hint {
+  font-size: 0.875rem;
+  margin-top: var(--spacing-sm);
+}
+
+.messagesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+}
+
+.myMessage {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.theirMessage {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.messageContent {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+}
+
+.myMessage .messageContent {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+.messageContent p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.voiceMessage {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+}
+
+.typingIndicator {
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.inputContainer {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
+  background-color: var(--bg-primary);
+}
+
+.inputContainer input {
+  flex: 1;
+}
+
+.inputContainer button {
+  flex-shrink: 0;
+}

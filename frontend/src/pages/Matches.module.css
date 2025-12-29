@@ -1,0 +1,57 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.matchesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.matchCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-primary);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.matchCard:hover {
+  background-color: var(--bg-secondary);
+}
+
+.matchInfo h3 {
+  margin-bottom: var(--spacing-xs);
+}
+
+.meta {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.revealLevel {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.messages {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+}
+
+.arrow {
+  font-size: 1.5rem;
+  color: var(--text-tertiary);
+}
