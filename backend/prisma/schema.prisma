@@ -1,0 +1,150 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL
+// ============================================
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  username     String
+  age          Int
+  city         String
+  description  String   @db.Text
+  photoUrl     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  sentMessages        Message[]      @relation("UserSentMessages")
+  conversationsAsUserA Conversation[] @relation("ConversationUserA")
+  conversationsAsUserB Conversation[] @relation("ConversationUserB")
+  blocksGiven         Block[]        @relation("BlockerUser")
+  blocksReceived      Block[]        @relation("BlockedUser")
+  reportsGiven        Report[]       @relation("ReporterUser")
+  reportsReceived     Report[]       @relation("ReportedUser")
+  likesGiven          Like[]         @relation("LikerUser")
+  likesReceived       Like[]         @relation("LikedUser")
+
+  @@index([email])
+  @@index([isActive])
+  @@map("users")
+}
+
+// ============================================
+// LIKE MODEL (for discovery & matching)
+// ============================================
+model Like {
+  id        String   @id @default(uuid())
+  likerId   String
+  likedId   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  liker User @relation("LikerUser", fields: [likerId], references: [id], onDelete: Cascade)
+  liked User @relation("LikedUser", fields: [likedId], references: [id], onDelete: Cascade)
+
+  @@unique([likerId, likedId])
+  @@index([likerId])
+  @@index([likedId])
+  @@map("likes")
+}
+
+// ============================================
+// CONVERSATION MODEL
+// ============================================
+model Conversation {
+  id        String   @id @default(uuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userA    User      @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User      @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+  @@map("conversations")
+}
+
+// ============================================
+// MESSAGE MODEL
+// ============================================
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  senderId       String
+  type           MessageType
+  content        String?  @db.Text
+  audioUrl       String?
+  audioDuration  Int?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  VOICE
+}
+
+// ============================================
+// BLOCK MODEL
+// ============================================
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  blocker User @relation("BlockerUser", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// ============================================
+// REPORT MODEL
+// ============================================
+model Report {
+  id         String   @id @default(uuid())
+  reporterId String
+  reportedId String
+  reason     String   @db.Text
+  createdAt  DateTime @default(now())
+
+  // Relations
+  reporter User @relation("ReporterUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported User @relation("ReportedUser", fields: [reportedId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([createdAt])
+  @@map("reports")
+}
