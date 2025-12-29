@@ -3,11 +3,12 @@ import { body } from 'express-validator';
 import { UserController } from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validation.middleware';
+import { rateLimiter } from '../middlewares/rateLimit.middleware';
 
 const router = Router();
 
-router.get('/profile', authenticate, UserController.getProfile);
-router.get('/profile/:userId', authenticate, UserController.getProfile);
+router.get('/profile', rateLimiter, authenticate, UserController.getProfile);
+router.get('/profile/:userId', rateLimiter, authenticate, UserController.getProfile);
 
 router.put(
   '/profile',
