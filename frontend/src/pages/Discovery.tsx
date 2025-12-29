@@ -31,10 +31,13 @@ const Discovery: React.FC = () => {
   const handleLike = async () => {
     if (actionLoading || currentIndex >= users.length) return;
 
+    console.log('Like button clicked');
     setActionLoading(true);
     try {
       const currentUser = users[currentIndex];
+      console.log('Sending like request for user:', currentUser.id);
       const result = await discoveryAPI.like(currentUser.id);
+      console.log('Like request successful:', result);
       
       if (result.matched) {
         setMatchedUserId(currentUser.id);
@@ -55,10 +58,13 @@ const Discovery: React.FC = () => {
   const handleDislike = async () => {
     if (actionLoading || currentIndex >= users.length) return;
 
+    console.log('Pass button clicked');
     setActionLoading(true);
     try {
       const currentUser = users[currentIndex];
+      console.log('Sending dislike request for user:', currentUser.id);
       await discoveryAPI.dislike(currentUser.id);
+      console.log('Dislike request successful');
       moveToNext();
     } catch (error) {
       console.error('Failed to dislike:', error);
