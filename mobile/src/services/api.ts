@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { API_URL } from '../constants/theme';
+import { API_URL } from '../config/api';
 import {
   AuthResponse,
   LoginRequest,
