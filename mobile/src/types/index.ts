@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   age: number;
+  gender: string;
   city: string;
   description: string;
   photoUrl?: string | null;
@@ -54,6 +55,7 @@ export interface RegisterRequest {
   password: string;
   name: string;
   age: number;
+  gender: string;
   city: string;
   description: string;
 }
