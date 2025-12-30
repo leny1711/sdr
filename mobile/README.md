@@ -1,207 +1,164 @@
-# SDR Mobile App - React Native (Expo)
+# SDR Mobile App - React Native CLI
 
-A Kindle-inspired mobile dating application built with React Native and Expo.
+This is the mobile application for SDR (Text-First Dating), built with React Native CLI for Android.
 
-## 🎯 Features
+## Prerequisites
 
-- **Kindle-Inspired Design**: Clean, text-first interface with off-white backgrounds and serif fonts
-- **Authentication**: User registration and login with JWT tokens
-- **Discovery**: Read and discover user profiles like book pages
-- **Matches**: View all matched users with photo reveal levels
-- **Real-time Chat**: Socket.io powered messaging with typing indicators
-- **Profile Management**: View and edit your profile
-- **Progressive Photo Reveal**: Photos unlock through genuine conversation
+- Node.js 18 or higher
+- Java Development Kit (JDK) 17 or higher
+- Android Studio with Android SDK
+- Android device with USB debugging enabled OR Android emulator
 
-## 🛠️ Tech Stack
+## Setup Instructions
 
-- **React Native** with **Expo** ~54.0
-- **TypeScript** 5.x
-- **React Navigation** 7.x (Native Stack & Bottom Tabs)
-- **Axios** for REST API
-- **Socket.io Client** for real-time messaging
-- **Expo Secure Store** for token storage
+### 1. Install Dependencies
 
-## 📋 Prerequisites
-
-- Node.js v18+
-- Expo CLI (`npm install -g expo-cli`)
-- iOS Simulator (macOS) or Android Emulator
-- Backend server running (see `/backend/README.md`)
-
-## 🚀 Installation
-
-1. Install dependencies:
 ```bash
 cd mobile
 npm install
 ```
 
-2. Configure environment:
+### 2. Configure Android Environment
+
+Make sure you have the following environment variables set:
+
 ```bash
-cp .env.example .env
-# Edit .env with your backend API URL
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/tools
+export PATH=$PATH:$ANDROID_HOME/tools/bin
+export PATH=$PATH:$ANDROID_HOME/platform-tools
 ```
 
-3. Start the development server:
+### 3. Start Metro Bundler
+
+In the mobile directory, start Metro:
+
 ```bash
 npm start
 ```
 
-4. Run on your device:
-   - Press `i` for iOS Simulator (macOS only)
-   - Press `a` for Android Emulator
-   - Scan QR code with Expo Go app on your phone
+### 4. Run on Android
 
-## 📱 Testing on Physical Device
+In a new terminal, run:
 
-When testing on a physical device:
+```bash
+npm run android
+```
 
-1. Make sure your phone and computer are on the same network
-2. Find your computer's local IP address:
-   - macOS/Linux: `ifconfig | grep inet`
-   - Windows: `ipconfig`
-3. Update the API URLs in `src/constants/theme.ts`:
-   ```typescript
-   export const API_URL = 'http://YOUR_IP:5000/api';
-   export const SOCKET_URL = 'http://YOUR_IP:5000';
-   ```
+Or directly:
 
-## 🎨 Design System
+```bash
+npx react-native run-android
+```
 
-### Colors (Kindle-Inspired)
-- **Background**: `#F5F4EF` (off-white)
-- **Text**: `#111111` (dark)
-- **Borders**: `#DDDDDD` (light gray)
+## API Configuration
 
-### Typography
-- **Serif fonts** (Georgia) for body text
-- **Sans-serif fonts** for UI elements
-- **Line height**: 1.8 for body content
+The app connects to the backend API at:
 
-### Layout
-- Max content width: 720px
-- Screen padding: 20px
-- Generous spacing throughout
+```
+http://192.168.1.116:5000/api
+```
 
-## 📁 Project Structure
+This is configured in `src/config/api.ts`. Update this IP address if your backend server is running on a different address.
+
+## Features (Step 1 - Minimal)
+
+Currently implemented:
+
+- **Login Screen**: Email and password authentication
+- **Register Screen**: User registration with required fields
+  - Name
+  - Email
+  - Password
+  - Age
+  - Gender (required by backend)
+  - City (required by backend)
+  - Description (required by backend)
+
+## Architecture
+
+### Technology Stack
+
+- **React Native**: 0.73.2
+- **TypeScript**: 5.0.4
+- **React Navigation**: Stack navigation for auth flow
+- **Axios**: HTTP client for API calls
+- **AsyncStorage**: Local storage for authentication tokens
+- **Socket.io-client**: For real-time features (future)
+
+### Project Structure
 
 ```
 mobile/
+├── android/              # Android native code
 ├── src/
-│   ├── screens/          # Screen components
-│   │   ├── LoginScreen.tsx
-│   │   ├── RegisterScreen.tsx
-│   │   ├── DiscoveryScreen.tsx
-│   │   ├── MatchesScreen.tsx
-│   │   ├── ChatScreen.tsx
-│   │   └── ProfileScreen.tsx
-│   ├── navigation/       # Navigation setup
-│   │   └── index.tsx
-│   ├── contexts/         # React Context
-│   │   └── AuthContext.tsx
-│   ├── services/         # API & Socket.io
-│   │   ├── api.ts
-│   │   └── socket.ts
-│   ├── types/           # TypeScript types
-│   │   └── index.ts
-│   └── constants/       # Theme & constants
-│       └── theme.ts
+│   ├── config/          # API configuration
+│   ├── constants/       # Theme and constants
+│   ├── contexts/        # React contexts (Auth)
+│   ├── navigation/      # Navigation setup
+│   ├── screens/         # Screen components
+│   ├── services/        # API and socket services
+│   └── types/           # TypeScript type definitions
 ├── App.tsx              # Root component
-├── package.json
-└── tsconfig.json
+├── index.js             # Entry point
+└── package.json         # Dependencies
 ```
 
-## 🔌 API Integration
+## No Expo
 
-The mobile app integrates with the backend API:
+This project has been migrated from Expo to React Native CLI for better native control and stability. All Expo dependencies have been removed.
 
-### REST API Endpoints
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/me` - Get current user
-- `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update profile
-- `GET /api/discovery` - Get discoverable users
-- `POST /api/discovery/like` - Like a user
-- `POST /api/discovery/dislike` - Dislike a user
-- `GET /api/matches` - Get user matches
-- `GET /api/conversations/:id` - Get conversation
-- `GET /api/conversations/:id/messages` - Get messages
-- `POST /api/messages/text` - Send text message
+## Troubleshooting
 
-### Socket.io Events
-- `join:conversation` - Join chat room
-- `leave:conversation` - Leave chat room
-- `message:text` - Send text message
-- `message:new` - Receive new message
-- `typing:start` - User started typing
-- `typing:stop` - User stopped typing
-- `typing:user` - Typing indicator
+### Metro Bundler Issues
 
-## 📱 Screens
+If you encounter Metro cache issues:
 
-### Authentication
-- **Login**: Email and password login
-- **Register**: Full registration with profile details
-
-### Main App
-- **Discovery**: Browse and read user profiles
-- **Matches**: List of all matched users
-- **Chat**: Real-time messaging with typing indicators
-- **Profile**: View and edit your profile
-
-## 🔒 Security
-
-- JWT token stored securely in Expo Secure Store
-- Automatic token refresh on app restart
-- Protected routes with authentication
-- Input validation on all forms
-
-## 🚀 Building for Production
-
-### iOS
 ```bash
-expo build:ios
+npm start -- --reset-cache
 ```
 
-### Android
+### Build Errors
+
+Clean the Android build:
+
 ```bash
-expo build:android
+cd android
+./gradlew clean
+cd ..
 ```
 
-See [Expo documentation](https://docs.expo.dev/distribution/building-standalone-apps/) for detailed build instructions.
+### Connection Issues
 
-## 📝 Development Scripts
+If the app cannot connect to the backend:
 
-- `npm start` - Start Expo development server
-- `npm run android` - Run on Android emulator
-- `npm run ios` - Run on iOS simulator (macOS only)
-- `npm run web` - Run in web browser (limited functionality)
+1. Ensure your backend is running on `http://192.168.1.116:5000`
+2. Ensure your Android device/emulator is on the same network
+3. Update the IP address in `src/config/api.ts` if needed
+4. Check that `android:usesCleartextTraffic="true"` is set in AndroidManifest.xml
 
-## 🐛 Troubleshooting
+## Development
 
-### "Network request failed"
-- Ensure backend server is running
-- Check API_URL matches your backend URL
-- If testing on physical device, use computer's IP address
+### Running on Physical Device
 
-### "Unable to connect to Socket.io"
-- Verify SOCKET_URL is correct
-- Check backend Socket.io server is running
-- Ensure WebSocket connections are allowed on your network
+1. Enable USB debugging on your Android device
+2. Connect via USB
+3. Verify connection: `adb devices`
+4. Run: `npm run android`
 
-### iOS Simulator not launching
-- Open Xcode and install iOS Simulator
-- Run: `xcode-select --install`
+### Running on Emulator
 
-### Android Emulator not launching
-- Open Android Studio
-- Go to AVD Manager and create/start an emulator
+1. Start Android Studio
+2. Open AVD Manager
+3. Start an emulator
+4. Run: `npm run android`
 
-## 📄 License
+## Next Steps
 
-ISC
-
-## 👥 Author
-
-SDR Dating Team
+Future features to be implemented:
+- Discovery screen
+- Matches screen
+- Chat functionality
+- Profile management
+- iOS support

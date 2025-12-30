@@ -11,6 +11,11 @@ backend/dist/
 frontend/dist/
 mobile/.expo/
 mobile/dist/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/app/.cxx/
+mobile/.gradle/
 
 # Environment variables
 .env
@@ -46,3 +51,4 @@ coverage/
 tmp/
 temp/
 *.tmp
+mobile_backup/
