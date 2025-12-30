@@ -24,13 +24,14 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
   const [city, setCity] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
 
   const handleRegister = async () => {
-    if (!email || !password || !name || !age || !city || !description) {
+    if (!email || !password || !name || !age || !gender || !city || !description) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -53,6 +54,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
         password,
         name: name.trim(),
         age: ageNum,
+        gender: gender.trim(),
         city: city.trim(),
         description: description.trim(),
       });
@@ -118,6 +120,15 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               placeholder="18+"
               placeholderTextColor={Colors.textTertiary}
               keyboardType="number-pad"
+            />
+
+            <Text style={styles.label}>Gender</Text>
+            <TextInput
+              style={styles.input}
+              value={gender}
+              onChangeText={setGender}
+              placeholder="e.g., Male, Female, Non-binary"
+              placeholderTextColor={Colors.textTertiary}
             />
 
             <Text style={styles.label}>City</Text>

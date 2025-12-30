@@ -44,18 +44,18 @@ class ApiService {
 
   // Authentication
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await this.api.post<AuthResponse>('/auth/register', data);
-    return response.data;
+    const response = await this.api.post<{ success: boolean; data: AuthResponse }>('/auth/register', data);
+    return response.data.data;
   }
 
   async login(data: LoginRequest): Promise<AuthResponse> {
-    const response = await this.api.post<AuthResponse>('/auth/login', data);
-    return response.data;
+    const response = await this.api.post<{ success: boolean; data: AuthResponse }>('/auth/login', data);
+    return response.data.data;
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await this.api.get<User>('/auth/me');
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: User }>('/auth/me');
+    return response.data.data;
   }
 
   // User Profile
