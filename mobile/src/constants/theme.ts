@@ -55,6 +55,3 @@ export const Layout = {
   screenPadding: 20,
   borderRadius: 8,
 };
-
-export const API_URL = 'http://localhost:5000/api';
-export const SOCKET_URL = 'http://localhost:5000';

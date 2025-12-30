@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { SOCKET_URL } from '../constants/theme';
+import { SOCKET_URL } from '../config/api';
 import { Message } from '../types';
 
 class SocketService {
