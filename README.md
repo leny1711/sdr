@@ -80,9 +80,16 @@ sdr/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js v18+
-- PostgreSQL
-- npm or yarn
+- Node.js v18+ or v20+ (LTS recommended)
+- PostgreSQL database
+- npm
+- Java JDK 17 or 21 (for Android mobile development)
+- Expo Go app on your phone (for mobile testing)
+
+### Quick Start
+
+**See [QUICK_START.md](./QUICK_START.md) for quick setup**  
+**See [PROJECT_SETUP_WINDOWS.md](./PROJECT_SETUP_WINDOWS.md) for complete Windows guide**
 
 ### Backend Setup
 
@@ -92,9 +99,31 @@ See [backend/README.md](./backend/README.md) for detailed instructions.
 cd backend
 npm install
 cp .env.example .env
-# Configure your .env file
+# Configure your .env file with database credentials
+npx prisma generate
+npx prisma migrate dev
 npm run dev
 ```
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Mobile Setup (Expo)
+
+```bash
+cd mobile
+npm install
+cp .env.example .env
+# Configure .env with your computer's IP address
+npx expo start
+```
+
+Then scan the QR code with Expo Go app on your phone.
 
 ## 📖 Development Progress
 
