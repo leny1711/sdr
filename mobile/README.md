@@ -2,12 +2,39 @@
 
 Text-first dating mobile application built with Expo and TypeScript.
 
+## ⚠️ CRITICAL: IP Address Configuration
+
+**BEFORE RUNNING**, you MUST update your computer's IP address in:
+
+### `mobile/src/config/api.ts`
+```typescript
+export const API_URL = 'http://YOUR_IP:5000/api';
+export const SOCKET_URL = 'http://YOUR_IP:5000';
+```
+
+### How to Find Your IP:
+- **Windows:** `ipconfig` (look for IPv4 Address)
+- **Mac/Linux:** `ifconfig` or `ip addr`
+
+### Example:
+If your IP is `192.168.1.105`:
+```typescript
+export const API_URL = 'http://192.168.1.105:5000/api';
+export const SOCKET_URL = 'http://192.168.1.105:5000';
+```
+
+**⚠️ Important:**
+- Android CANNOT use `localhost` - use your actual IP
+- Phone and computer MUST be on same WiFi
+- If backend logs show no requests, your IP is wrong
+- Also update `backend/.env` with `CORS_ORIGIN=http://YOUR_IP:5173`
+
 ## Prerequisites
 
 - Node.js 18 or higher
 - npm (comes with Node.js)
 - Expo Go app on your phone (Android or iOS)
-- Java JDK 17 or 21 (for Android development)
+- Backend server running (see main project README)
 
 ## Quick Start
 
@@ -20,30 +47,7 @@ npm install
 
 ### 2. Configure API URL
 
-**Option 1: Edit the config file directly (Recommended for beginners)**
-
-Edit `src/config/api.ts` and update the default URLs:
-
-```typescript
-export const API_URL = 'http://YOUR_IP_ADDRESS:5000/api';
-export const SOCKET_URL = 'http://YOUR_IP_ADDRESS:5000';
-```
-
-**Find your IP address:**
-- Windows: Open Command Prompt and type `ipconfig`
-- Mac: Open Terminal and type `ifconfig`
-- Linux: Open Terminal and type `ip addr`
-- Look for "IPv4 Address" (e.g., 192.168.1.100)
-
-**Option 2: Use environment variables (Advanced)**
-
-Create a `.env` file (copy from `.env.example`) and update it:
-```env
-API_URL=http://YOUR_IP_ADDRESS:5000/api
-SOCKET_URL=http://YOUR_IP_ADDRESS:5000
-```
-
-Then install and configure `expo-constants` to read environment variables.
+Edit `src/config/api.ts` and update with your computer's IP address (see section above).
 
 ### 3. Start Expo
 
@@ -84,33 +88,45 @@ npm run type-check
 
 ```
 mobile/
-├── App.tsx              # Root component
+├── App.tsx              # Root component with AuthProvider
 ├── app.json            # Expo configuration
 ├── index.ts            # Entry point
 ├── assets/             # Images and fonts
 └── src/
     ├── config/         # API configuration
+    │   └── api.ts      # API URLs (UPDATE YOUR IP HERE!)
     ├── constants/      # Theme and constants
-    ├── contexts/       # React contexts (Auth)
+    ├── contexts/       # React contexts
+    │   └── AuthContext.tsx  # Authentication context
     ├── navigation/     # Navigation setup
+    │   └── index.tsx   # Auth/App navigator switching
     ├── screens/        # Screen components
     │   ├── LoginScreen.tsx
     │   ├── RegisterScreen.tsx
-    │   └── unused/     # Future screens
+    │   ├── DiscoveryScreen.tsx
+    │   ├── MatchesScreen.tsx
+    │   ├── ChatScreen.tsx
+    │   └── ProfileScreen.tsx
     ├── services/       # API and socket services
     └── types/          # TypeScript type definitions
 ```
 
 ## Features Implemented
 
-- ✅ Expo SDK 54
-- ✅ TypeScript
-- ✅ React Navigation (Stack Navigator)
-- ✅ Authentication (Login/Register)
-- ✅ API integration with backend
-- ✅ Socket.io client (for real-time features)
-- ✅ Secure token storage (Expo SecureStore)
-- ✅ Kindle-inspired UI design
+### ✅ Complete Features
+- **Authentication:** Login/Register with JWT tokens
+- **Auto-navigation:** Automatic switch between auth and app screens
+- **Persistent login:** Token saved, auto-login on app restart
+- **Bottom Tab Navigation:** Discovery, Matches, Profile tabs
+- **Discovery:** Browse and like/pass on users
+- **Matches:** View your matches
+- **Chat:** Real-time messaging with Socket.io
+- **Profile:** Edit your profile, logout
+
+### 📱 App Flow
+1. **First Launch:** Login or Register screen
+2. **After Auth:** Automatically navigate to Discovery tab
+3. **Next Launch:** Skip login if token exists, go directly to app
 
 ## Technology Stack
 
@@ -118,11 +134,40 @@ mobile/
 - **React:** 19.1.0
 - **React Native:** 0.81.5
 - **TypeScript:** ~5.9.2
-- **React Navigation:** ^7.x
+- **React Navigation:** ^7.x with Bottom Tabs
 - **Axios:** ^1.13.2
 - **Socket.io-client:** ^4.8.3
+- **AsyncStorage:** ^2.2.0 (for token storage)
+
+## Navigation Structure
+
+```
+NavigationContainer
+├── AuthNavigator (when not authenticated)
+│   ├── Login
+│   └── Register
+└── AppNavigator (when authenticated)
+    ├── MainTabs (Bottom Tabs)
+    │   ├── Discovery
+    │   ├── Matches
+    │   └── Profile
+    └── Chat (Stack Screen - opens from Matches)
+```
 
 ## Troubleshooting
+
+### Cannot Connect to Backend / Network Request Failed
+
+**This is the most common issue!**
+
+**Solution:**
+1. Verify backend is running: `cd backend && npm run dev`
+2. Check your IP address hasn't changed: `ipconfig` or `ifconfig`
+3. Update `mobile/src/config/api.ts` with correct IP
+4. Update `backend/.env` with `CORS_ORIGIN=http://YOUR_IP:5173`
+5. Restart backend after changing `.env`
+6. Ensure phone and computer on same WiFi
+7. Try clearing Expo cache: `npx expo start -c`
 
 ### Cannot Connect to Metro
 
@@ -131,18 +176,18 @@ mobile/
 npx expo start -c
 ```
 
-### Network Request Failed
-
-1. Check backend is running: `cd backend && npm run dev`
-2. Verify IP address in `.env` matches your computer's IP
-3. Ensure phone and computer are on same WiFi
-4. Try tunnel mode: `npx expo start --tunnel`
-
 ### Expo Go Not Loading
 
 1. Close Expo Go completely
 2. Restart Expo server: `npx expo start -c`
 3. Scan QR code again
+
+### App Stuck on Login After Successful Auth
+
+This means navigation isn't switching. Check:
+1. AuthContext is properly setting both `user` and `token`
+2. Backend returned both in the response
+3. Try logging out and back in
 
 ### Type Errors
 
@@ -186,22 +231,6 @@ eas build --platform android
 eas build --platform ios
 ```
 
-## Environment Variables
-
-Create a `.env` file with:
-
-```env
-# Backend API URL (use your computer's IP address)
-API_URL=http://192.168.1.100:5000/api
-
-# Socket.io URL
-SOCKET_URL=http://192.168.1.100:5000
-```
-
-## API Configuration
-
-API base URL is configured in `src/config/api.ts`. It reads from environment variables.
-
 ## Testing on Physical Device
 
 **Android:**
@@ -236,7 +265,10 @@ First load is always slower. Subsequent loads are faster due to caching.
 - [Expo Documentation](https://docs.expo.dev/)
 - [React Navigation](https://reactnavigation.org/)
 - [React Native Documentation](https://reactnative.dev/)
+- **Main Project Docs:** See `QUICK_START.md` in project root
 
 ## Support
 
-For issues specific to this project, see the main project documentation or the Windows setup guide: `PROJECT_SETUP_WINDOWS.md`
+For issues specific to this project, see:
+- **Quick Start Guide:** `../QUICK_START.md`
+- **Windows Setup:** `../PROJECT_SETUP_WINDOWS.md`
