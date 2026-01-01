@@ -18,23 +18,32 @@ cd mobile
 npm install
 ```
 
-### 2. Configure Environment
+### 2. Configure API URL
 
-```bash
-# Copy the example environment file
-cp .env.example .env
+**Option 1: Edit the config file directly (Recommended for beginners)**
 
-# Edit .env with your computer's IP address
-# On Windows: ipconfig
-# On Mac/Linux: ifconfig
-# Look for your IPv4 Address (e.g., 192.168.1.100)
+Edit `src/config/api.ts` and update the default URLs:
+
+```typescript
+export const API_URL = 'http://YOUR_IP_ADDRESS:5000/api';
+export const SOCKET_URL = 'http://YOUR_IP_ADDRESS:5000';
 ```
 
-Update `.env`:
+**Find your IP address:**
+- Windows: Open Command Prompt and type `ipconfig`
+- Mac: Open Terminal and type `ifconfig`
+- Linux: Open Terminal and type `ip addr`
+- Look for "IPv4 Address" (e.g., 192.168.1.100)
+
+**Option 2: Use environment variables (Advanced)**
+
+Create a `.env` file (copy from `.env.example`) and update it:
 ```env
 API_URL=http://YOUR_IP_ADDRESS:5000/api
 SOCKET_URL=http://YOUR_IP_ADDRESS:5000
 ```
+
+Then install and configure `expo-constants` to read environment variables.
 
 ### 3. Start Expo
 

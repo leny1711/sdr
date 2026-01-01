@@ -280,7 +280,25 @@ npm install
 
 **Expected Time:** 2-3 minutes
 
-**Environment File:**
+**Configuration:**
+
+The mobile app needs to know your backend server's IP address.
+
+**Method 1: Edit Config File (RECOMMENDED FOR BEGINNERS)**
+
+```bash
+# Open the API configuration file
+notepad src\config\api.ts
+```
+
+Update the URLs with your computer's IP address:
+```typescript
+export const API_URL = 'http://YOUR_IP_ADDRESS:5000/api';
+export const SOCKET_URL = 'http://YOUR_IP_ADDRESS:5000';
+```
+
+**Method 2: Use Environment Variables (OPTIONAL)**
+
 ```bash
 # Copy the example environment file
 copy .env.example .env
@@ -289,17 +307,13 @@ copy .env.example .env
 notepad .env
 ```
 
-**Required Variables in `.env`:**
+Set your IP address:
 ```env
-# Backend API URL
-# IMPORTANT: Replace with your computer's IP address
-# To find your IP on Windows: Open Command Prompt and type: ipconfig
-# Look for "IPv4 Address" under your WiFi adapter
 API_URL=http://192.168.1.100:5000/api
-
-# Socket.io URL
 SOCKET_URL=http://192.168.1.100:5000
 ```
+
+Note: Using .env requires additional Expo configuration. Method 1 is simpler.
 
 **How to Find Your IP Address:**
 1. Open Command Prompt
