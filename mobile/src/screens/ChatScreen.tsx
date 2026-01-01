@@ -17,10 +17,10 @@ import apiService from '../services/api';
 import socketService from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
 import { Message, Conversation } from '../types';
-import { RootStackParamList } from '../navigation';
+import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 
-type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chat'>;
+type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();

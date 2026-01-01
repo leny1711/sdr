@@ -13,10 +13,10 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import apiService from '../services/api';
 import { Match } from '../types';
-import { RootStackParamList } from '../navigation';
+import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
 const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);
