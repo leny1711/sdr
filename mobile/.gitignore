@@ -3,6 +3,12 @@
 # dependencies
 node_modules/
 
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
 # Native
 .kotlin/
 *.orig.*
@@ -30,20 +36,6 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# Android/IntelliJ
-.idea
-.gradle
-local.properties
-*.iml
-*.hprof
-.cxx/
-android/build/
-android/app/build/
-android/.gradle/
-
-# Keystore (except debug)
-*.keystore
-!android/app/debug.keystore
-
-# Bundle artifacts
-*.jsbundle
+# generated native folders
+/ios
+/android

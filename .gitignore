@@ -22,6 +22,7 @@ mobile/.gradle/
 .env.local
 .env.*.local
 backend/.env
+mobile/.env
 
 # Logs
 *.log

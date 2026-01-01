@@ -1,219 +1,168 @@
-# 🚀 Quick Start - React Native CLI Mobile App
+# 🚀 Quick Start Guide - SDR Application
 
-## ✅ Migration Complete
-
-The SDR mobile app has been successfully migrated from Expo to React Native CLI.
+**For detailed Windows-specific setup instructions, see [PROJECT_SETUP_WINDOWS.md](./PROJECT_SETUP_WINDOWS.md)**
 
 ---
 
-## 📋 Quick Command Reference
+## Prerequisites
 
-### First Time Setup
+- Node.js 18+ or 20+ (LTS recommended)
+- npm (comes with Node.js)
+- Java JDK 17 or 21 (for Android development)
+- Expo Go app on your phone
+
+---
+
+## Quick Setup (All Platforms)
+
+### 1. Backend Setup
 
 ```bash
-# 1. Go to mobile directory
+cd backend
+npm install
+cp .env.example .env
+# Edit .env with your database credentials
+npx prisma generate
+npx prisma migrate dev
+npm run dev
+```
+
+Backend will run on: http://localhost:5000
+
+---
+
+### 2. Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend will run on: http://localhost:5173
+
+---
+
+### 3. Mobile Setup (Expo)
+
+```bash
 cd mobile
-
-# 2. Install dependencies
 npm install
-
-# 3. Verify environment (optional)
-./setup.sh
+cp .env.example .env
+# Edit .env with your computer's IP address
+npx expo start
 ```
 
-### Running the App
-
-```bash
-# Terminal 1: Start Metro bundler
-npm start
-
-# Terminal 2: Build and run on Android
-npm run android
-```
-
-**That's it!** The app should build and launch on your connected Android device or emulator.
-
----
-
-## 🎯 What You Get
-
-### Screens Implemented
-- ✅ **Login Screen** - Email and password authentication
-- ✅ **Register Screen** - Full registration form with:
-  - Name
-  - Email  
-  - Password
-  - Age (18+)
-  - Gender
-  - City
-  - Description (100+ characters)
-
-### Technical Stack
-- React Native 0.73.2 (CLI, not Expo)
-- TypeScript 5.0.4
-- React Navigation (Stack)
-- Axios for API calls
-- AsyncStorage for token storage
-- Socket.io-client (ready for future use)
-
----
-
-## 🔧 Configuration
-
-### API Endpoint
-The app connects to:
-```
-http://192.168.1.116:5000/api
-```
-
-**To change:** Edit `mobile/src/config/api.ts`
-
-### Requirements
-- Node.js 18+
-- JDK 17+
-- Android SDK
-- Android device or emulator
-
----
-
-## ⚡ Quick Test
-
-1. **Start backend server** (if not running)
-   ```bash
-   cd backend
-   npm start
+**Important Steps:**
+1. Find your computer's IP address:
+   - Windows: `ipconfig` (look for IPv4 Address)
+   - Mac/Linux: `ifconfig` or `ip addr`
+2. Update `mobile/.env` with your IP:
+   ```env
+   API_URL=http://YOUR_IP:5000/api
+   SOCKET_URL=http://YOUR_IP:5000
    ```
-
-2. **Connect Android device**
-   ```bash
-   adb devices  # Should show your device
-   ```
-
-3. **Build and run**
-   ```bash
-   cd mobile
-   npm start        # Terminal 1
-   npm run android  # Terminal 2
-   ```
-
-4. **Test registration**
-   - Fill all fields on Register screen
-   - Submit
-   - Should auto-login after successful registration
-
-5. **Test login**
-   - Logout (when implemented)
-   - Login with registered credentials
+3. Install Expo Go on your phone
+4. Scan the QR code shown in terminal
+5. Ensure phone and computer are on same WiFi
 
 ---
 
-## 📖 Documentation
+## Running All Three Components
 
-- **Quick Start:** This file
-- **Detailed Setup:** `mobile/MIGRATION_GUIDE.md`
-- **Project Overview:** `mobile/README.md`
-- **Migration Summary:** `MOBILE_MIGRATION_COMPLETE.md`
+You need **3 separate terminals**:
 
----
-
-## 🐛 Common Issues
-
-### "Cannot connect to development server"
+**Terminal 1 - Backend:**
 ```bash
-npm start -- --reset-cache
+cd backend && npm run dev
 ```
 
-### "SDK location not found"
-Set `ANDROID_HOME` environment variable:
+**Terminal 2 - Frontend:**
 ```bash
-export ANDROID_HOME=$HOME/Android/Sdk
+cd frontend && npm run dev
 ```
 
-### Build failed
+**Terminal 3 - Mobile:**
 ```bash
-cd android
-./gradlew clean
-cd ..
-npm run android
-```
-
-### "Network request failed" when testing
-- Check backend is running
-- Verify IP address in `src/config/api.ts`
-- Ensure phone and computer on same WiFi network
-
----
-
-## 🎨 Project Structure
-
-```
-mobile/
-├── android/           # Android native code
-├── src/
-│   ├── screens/
-│   │   ├── LoginScreen.tsx
-│   │   └── RegisterScreen.tsx
-│   ├── navigation/    # Auth stack
-│   ├── contexts/      # Auth context
-│   ├── services/      # API & Socket
-│   ├── config/        # API URL
-│   └── types/         # TypeScript types
-├── App.tsx           # Root component
-├── index.js          # Entry point
-└── package.json      # Dependencies
+cd mobile && npx expo start
 ```
 
 ---
 
-## ✅ What's Different from Expo
+## Technology Stack
 
-| Expo | React Native CLI |
-|------|------------------|
-| `expo start` | `npm start` |
-| QR code scan | Direct USB/WiFi connection |
-| Expo Go app | Builds native APK |
-| `expo-secure-store` | AsyncStorage |
-| Managed workflow | Full native control |
+### Backend
+- Node.js + Express + TypeScript
+- PostgreSQL + Prisma ORM
+- Socket.io (Real-time)
+- JWT Authentication
 
----
+### Frontend (Web)
+- React 19 + TypeScript
+- Vite
+- React Router
+- Axios + Socket.io-client
 
-## 🎯 Success Criteria
-
-- [x] No Expo dependencies
-- [x] React Native CLI structure
-- [x] Login screen works
-- [x] Register screen works  
-- [x] API integration works
-- [x] TypeScript compiles
-- [ ] Tested on Android device *(user needs to test)*
+### Mobile
+- Expo SDK 54
+- React Native 0.81.5 + TypeScript
+- React Navigation
+- Axios + Socket.io-client
 
 ---
 
-## 🚀 Next Commands
+## Troubleshooting
 
+### Port Already in Use
 ```bash
-# Check environment
-./setup.sh
+# Kill process on port 5000 (backend)
+# Windows: netstat -ano | findstr :5000
+# Then: taskkill /PID <PID> /F
+```
 
-# Install dependencies
-npm install
+### Expo Not Connecting
+1. Check phone and computer on same WiFi
+2. Verify IP address in `mobile/.env`
+3. Try tunnel mode: `npx expo start --tunnel`
+4. Clear cache: `npx expo start -c`
 
-# Start development
-npm start             # Terminal 1
-npm run android       # Terminal 2
-
-# View logs
-npx react-native log-android
-
-# Type check
-npx tsc --noEmit
-
-# Clean build
-cd android && ./gradlew clean && cd ..
+### Database Error
+```bash
+cd backend
+npx prisma generate
+npx prisma migrate dev
 ```
 
 ---
 
-**🎉 Ready to test! Connect your Android device and run `npm run android`**
+## Full Documentation
 
-For issues, see `mobile/MIGRATION_GUIDE.md` troubleshooting section.
+- **Windows Setup:** [PROJECT_SETUP_WINDOWS.md](./PROJECT_SETUP_WINDOWS.md) - Complete Windows guide
+- **Project Overview:** [README.md](./README.md) - Project description
+- **Backend:** [backend/README.md](./backend/README.md) - Backend documentation
+- **Frontend:** [frontend/README.md](./frontend/README.md) - Frontend documentation
+- **Mobile:** [mobile/README.md](./mobile/README.md) - Expo mobile documentation
+
+---
+
+## What's Working
+
+✅ **Backend:** Complete API with auth, matching, chat, file uploads
+✅ **Frontend:** Full web application with all features
+✅ **Mobile:** Expo app with Login/Register screens
+✅ **Authentication:** JWT-based auth across all platforms
+✅ **Real-time:** Socket.io for messaging
+✅ **Database:** PostgreSQL + Prisma ORM
+
+---
+
+## Next Steps
+
+1. Complete mobile app features (Discovery, Matches, Chat)
+2. Test production builds
+3. Deploy to hosting services
+
+---
+
+**For beginners and Windows users:** Please use [PROJECT_SETUP_WINDOWS.md](./PROJECT_SETUP_WINDOWS.md) for step-by-step instructions with troubleshooting.
+
