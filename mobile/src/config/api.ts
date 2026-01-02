@@ -6,7 +6,7 @@
 // - Mac/Linux: Run 'ifconfig' or 'ip addr' in Terminal
 //
 // EXAMPLE: If your IP is 192.168.1.105, use:
-// export const API_URL = 'http://192.168.1.105:5000/api';
+// export const API_URL = 'http://192.168.1.105:5000';
 // export const SOCKET_URL = 'http://192.168.1.105:5000';
 //
 // ⚠️ IMPORTANT NOTES:
@@ -19,5 +19,5 @@
 // ALSO UPDATE: backend/.env with CORS_ORIGIN=http://YOUR_IP:5173
 
 // Default values - REPLACE WITH YOUR ACTUAL IP ADDRESS
-export const API_URL = process.env.API_URL || 'http://192.168.1.100:5000/api';
+export const API_URL = process.env.API_URL || 'http://192.168.1.100:5000';
 export const SOCKET_URL = process.env.SOCKET_URL || 'http://192.168.1.100:5000';
