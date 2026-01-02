@@ -49,6 +49,7 @@ export class AuthService {
       data: {
         ...data,
         password: hashedPassword,
+        isActive: true,
       },
       select: {
         id: true,
