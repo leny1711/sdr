@@ -71,9 +71,9 @@ class ApiService {
   }
 
   // Discovery
-  async getDiscoverableUsers(): Promise<DiscoverableUser[]> {
+  async getDiscoverableUsers() {
     const response = await this.api.get<DiscoverableUser[]>('/discovery');
-    return response.data;
+    return response;
   }
 
   async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: Conversation }> {

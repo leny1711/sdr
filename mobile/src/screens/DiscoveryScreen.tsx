@@ -26,8 +26,8 @@ const DiscoveryScreen = () => {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const data = await apiService.getDiscoverableUsers();
-      setUsers(data);
+      const response = await apiService.getDiscoverableUsers();
+      setUsers(response.data.data);
       setCurrentIndex(0);
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load profiles');
