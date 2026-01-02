@@ -61,57 +61,57 @@ class ApiService {
   // User Profile
   async getProfile(userId?: string): Promise<User> {
     const url = userId ? `/users/profile/${userId}` : '/users/profile';
-    const response = await this.api.get<User>(url);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: User }>(url);
+    return response.data.data;
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await this.api.put<User>('/users/profile', data);
-    return response.data;
+    const response = await this.api.put<{ success: boolean; data: User }>('/users/profile', data);
+    return response.data.data;
   }
 
   // Discovery
   async getDiscoverableUsers(): Promise<DiscoverableUser[]> {
-    const response = await this.api.get<DiscoverableUser[]>('/discovery');
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: DiscoverableUser[] }>('/discovery');
+    return response.data.data;
   }
 
   async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: Conversation }> {
-    const response = await this.api.post<{ match: boolean; conversation?: Conversation }>(
+    const response = await this.api.post<{ success: boolean; data: { matched: boolean; matchId?: string }; message: string }>(
       '/discovery/like',
-      { targetUserId }
+      { toUserId: targetUserId }
     );
-    return response.data;
+    return { match: response.data.data.matched, conversation: undefined };
   }
 
   async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
-    const response = await this.api.post<{ success: boolean }>('/discovery/dislike', {
-      targetUserId,
+    const response = await this.api.post<{ success: boolean; data: any }>('/discovery/dislike', {
+      toUserId: targetUserId,
     });
-    return response.data;
+    return { success: response.data.success };
   }
 
   // Matches
   async getMatches(): Promise<Match[]> {
-    const response = await this.api.get<Match[]>('/matches');
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Match[] }>('/matches');
+    return response.data.data;
   }
 
   // Conversations
   async getConversation(conversationId: string): Promise<Conversation> {
-    const response = await this.api.get<Conversation>(`/conversations/${conversationId}`);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Conversation }>(`/conversations/${conversationId}`);
+    return response.data.data;
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    const response = await this.api.get<Message[]>(`/conversations/${conversationId}/messages`);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Message[] }>(`/conversations/${conversationId}/messages`);
+    return response.data.data;
   }
 
   // Messages
   async sendTextMessage(data: MessageRequest): Promise<Message> {
-    const response = await this.api.post<Message>('/messages/text', data);
-    return response.data;
+    const response = await this.api.post<{ success: boolean; data: Message }>('/messages/text', data);
+    return response.data.data;
   }
 }
 
