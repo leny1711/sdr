@@ -57,10 +57,10 @@ async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: C
 
 **After:**
 ```typescript
-async likeUser(targetUserId: string): Promise<{ match: boolean; matchId?: string }> {
+async likeUser(toUserId: string): Promise<{ match: boolean; matchId?: string }> {
   const response = await this.api.post<{ success: boolean; data: { matched: boolean; matchId?: string }; message: string }>(
     '/discovery/like',
-    { toUserId: targetUserId } // ✅ Correct parameter name
+    { toUserId } // ✅ Correct parameter name
   );
   return { match: response.data.data.matched, matchId: response.data.data.matchId }; // ✅ Correct parsing
 }
@@ -83,9 +83,9 @@ async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
 
 **After:**
 ```typescript
-async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
+async dislikeUser(toUserId: string): Promise<{ success: boolean }> {
   const response = await this.api.post<{ success: boolean; data: { id: string; fromUserId: string; toUserId: string; isLike: boolean; createdAt: string } }>('/discovery/dislike', {
-    toUserId: targetUserId, // ✅ Correct parameter name
+    toUserId, // ✅ Correct parameter name
   });
   return { success: response.data.success }; // ✅ Correct parsing with proper typing
 }
