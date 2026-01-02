@@ -44,48 +44,48 @@ class ApiService {
 
   // Authentication
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await this.api.post<{ success: boolean; data: AuthResponse }>('/api/auth/register', data);
+    const response = await this.api.post<{ success: boolean; data: AuthResponse }>('/auth/register', data);
     return response.data.data;
   }
 
   async login(data: LoginRequest): Promise<AuthResponse> {
-    const response = await this.api.post<{ success: boolean; data: AuthResponse }>('/api/auth/login', data);
+    const response = await this.api.post<{ success: boolean; data: AuthResponse }>('/auth/login', data);
     return response.data.data;
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await this.api.get<{ success: boolean; data: User }>('/api/auth/me');
+    const response = await this.api.get<{ success: boolean; data: User }>('/auth/me');
     return response.data.data;
   }
 
   // User Profile
   async getProfile(userId?: string): Promise<User> {
-    const url = userId ? `/api/users/profile/${userId}` : '/api/users/profile';
+    const url = userId ? `/users/profile/${userId}` : '/users/profile';
     const response = await this.api.get<User>(url);
     return response.data;
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await this.api.put<User>('/api/users/profile', data);
+    const response = await this.api.put<User>('/users/profile', data);
     return response.data;
   }
 
   // Discovery
   async getDiscoverableUsers() {
-    const response = await this.api.get<DiscoverableUser[]>('/api/discovery');
+    const response = await this.api.get<DiscoverableUser[]>('/discovery');
     return response;
   }
 
   async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: Conversation }> {
     const response = await this.api.post<{ match: boolean; conversation?: Conversation }>(
-      '/api/discovery/like',
+      '/discovery/like',
       { targetUserId }
     );
     return response.data;
   }
 
   async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
-    const response = await this.api.post<{ success: boolean }>('/api/discovery/dislike', {
+    const response = await this.api.post<{ success: boolean }>('/discovery/dislike', {
       targetUserId,
     });
     return response.data;
@@ -93,24 +93,24 @@ class ApiService {
 
   // Matches
   async getMatches(): Promise<Match[]> {
-    const response = await this.api.get<Match[]>('/api/matches');
+    const response = await this.api.get<Match[]>('/matches');
     return response.data;
   }
 
   // Conversations
   async getConversation(conversationId: string): Promise<Conversation> {
-    const response = await this.api.get<Conversation>(`/api/conversations/${conversationId}`);
+    const response = await this.api.get<Conversation>(`/conversations/${conversationId}`);
     return response.data;
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    const response = await this.api.get<Message[]>(`/api/conversations/${conversationId}/messages`);
+    const response = await this.api.get<Message[]>(`/conversations/${conversationId}/messages`);
     return response.data;
   }
 
   // Messages
   async sendTextMessage(data: MessageRequest): Promise<Message> {
-    const response = await this.api.post<Message>('/api/messages/text', data);
+    const response = await this.api.post<Message>('/messages/text', data);
     return response.data;
   }
 }
