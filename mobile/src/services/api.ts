@@ -76,16 +76,16 @@ class ApiService {
     return response.data.data;
   }
 
-  async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: Conversation }> {
+  async likeUser(targetUserId: string): Promise<{ match: boolean; matchId?: string }> {
     const response = await this.api.post<{ success: boolean; data: { matched: boolean; matchId?: string }; message: string }>(
       '/discovery/like',
       { toUserId: targetUserId }
     );
-    return { match: response.data.data.matched, conversation: undefined };
+    return { match: response.data.data.matched, matchId: response.data.data.matchId };
   }
 
   async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
-    const response = await this.api.post<{ success: boolean; data: any }>('/discovery/dislike', {
+    const response = await this.api.post<{ success: boolean; data: { id: string; fromUserId: string; toUserId: string; isLike: boolean; createdAt: string } }>('/discovery/dislike', {
       toUserId: targetUserId,
     });
     return { success: response.data.success };
