@@ -42,6 +42,7 @@ async getDiscoverableUsers(): Promise<DiscoverableUser[]> {
 **Issues:**
 - Incorrect parameter name: sent `targetUserId` but backend expects `toUserId`
 - Incorrect response parsing: backend returns `matched` field, not `match`
+- Return type included unused `conversation` property
 
 **Before:**
 ```typescript
@@ -56,33 +57,37 @@ async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: C
 
 **After:**
 ```typescript
-async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: Conversation }> {
+async likeUser(targetUserId: string): Promise<{ match: boolean; matchId?: string }> {
   const response = await this.api.post<{ success: boolean; data: { matched: boolean; matchId?: string }; message: string }>(
     '/discovery/like',
     { toUserId: targetUserId } // ✅ Correct parameter name
   );
-  return { match: response.data.data.matched, conversation: undefined }; // ✅ Correct parsing
+  return { match: response.data.data.matched, matchId: response.data.data.matchId }; // ✅ Correct parsing
 }
 ```
 
 #### 3. Dislike User Endpoint
+**Issues:**
+- Incorrect parameter name: sent `targetUserId` but backend expects `toUserId`
+- Used `any` type, weakening type safety
+
 **Before:**
 ```typescript
 async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
   const response = await this.api.post<{ success: boolean }>('/discovery/dislike', {
     targetUserId, // ❌ Wrong parameter name
   });
-  return response.data;
+  return response.data; // ❌ Wrong response structure
 }
 ```
 
 **After:**
 ```typescript
 async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
-  const response = await this.api.post<{ success: boolean; data: any }>('/discovery/dislike', {
+  const response = await this.api.post<{ success: boolean; data: { id: string; fromUserId: string; toUserId: string; isLike: boolean; createdAt: string } }>('/discovery/dislike', {
     toUserId: targetUserId, // ✅ Correct parameter name
   });
-  return { success: response.data.success };
+  return { success: response.data.success }; // ✅ Correct parsing with proper typing
 }
 ```
 
