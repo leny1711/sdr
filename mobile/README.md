@@ -8,7 +8,7 @@ Text-first dating mobile application built with Expo and TypeScript.
 
 ### `mobile/src/config/api.ts`
 ```typescript
-export const API_URL = 'http://YOUR_IP:5000/api';
+export const API_URL = 'http://YOUR_IP:5000';
 export const SOCKET_URL = 'http://YOUR_IP:5000';
 ```
 
@@ -19,7 +19,7 @@ export const SOCKET_URL = 'http://YOUR_IP:5000';
 ### Example:
 If your IP is `192.168.1.105`:
 ```typescript
-export const API_URL = 'http://192.168.1.105:5000/api';
+export const API_URL = 'http://192.168.1.105:5000';
 export const SOCKET_URL = 'http://192.168.1.105:5000';
 ```
 

@@ -131,7 +131,7 @@ The SDR mobile application has been **successfully migrated to Expo** and **comp
    **Method 1 (Recommended):**
    Edit `mobile/src/config/api.ts`:
    ```typescript
-   export const API_URL = 'http://YOUR_IP:5000/api';
+   export const API_URL = 'http://YOUR_IP:5000';
    export const SOCKET_URL = 'http://YOUR_IP:5000';
    ```
    

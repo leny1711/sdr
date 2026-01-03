@@ -16,7 +16,7 @@ CORS_ORIGIN=http://YOUR_IP:5173
 
 ### 2. Mobile App Configuration: `mobile/src/config/api.ts`
 ```typescript
-export const API_URL = 'http://YOUR_IP:5000/api';
+export const API_URL = 'http://YOUR_IP:5000';
 export const SOCKET_URL = 'http://YOUR_IP:5000';
 ```
 
@@ -28,7 +28,7 @@ export const SOCKET_URL = 'http://YOUR_IP:5000';
 If your computer's IP is `192.168.1.105`, update:
 ```typescript
 // mobile/src/config/api.ts
-export const API_URL = 'http://192.168.1.105:5000/api';
+export const API_URL = 'http://192.168.1.105:5000';
 export const SOCKET_URL = 'http://192.168.1.105:5000';
 ```
 
