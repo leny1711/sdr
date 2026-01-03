@@ -158,7 +158,7 @@ ip addr
 
 Update `mobile/.env`:
 ```env
-API_URL=http://YOUR_IP:5000/api
+API_URL=http://YOUR_IP:5000
 SOCKET_URL=http://YOUR_IP:5000
 ```
 

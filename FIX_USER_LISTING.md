@@ -174,7 +174,7 @@ Also fixed similar issues in:
 3. **Verify API Configuration**
    ```typescript
    // mobile/src/config/api.ts should have:
-   export const API_URL = 'http://YOUR_COMPUTER_IP:5000/api';
+   export const API_URL = 'http://YOUR_COMPUTER_IP:5000';
    ```
 
 4. **Check CORS Configuration**

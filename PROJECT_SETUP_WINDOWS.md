@@ -293,7 +293,7 @@ notepad src\config\api.ts
 
 Update the URLs with your computer's IP address:
 ```typescript
-export const API_URL = 'http://YOUR_IP_ADDRESS:5000/api';
+export const API_URL = 'http://YOUR_IP_ADDRESS:5000';
 export const SOCKET_URL = 'http://YOUR_IP_ADDRESS:5000';
 ```
 
@@ -309,7 +309,7 @@ notepad .env
 
 Set your IP address:
 ```env
-API_URL=http://192.168.1.100:5000/api
+API_URL=http://192.168.1.100:5000
 SOCKET_URL=http://192.168.1.100:5000
 ```
 
@@ -653,7 +653,7 @@ npm run dev
 **2. Check API URL in mobile/.env:**
 ```env
 # Use your computer's IP, not localhost
-API_URL=http://192.168.1.100:5000/api
+API_URL=http://192.168.1.100:5000
 ```
 
 **3. Check CORS settings in backend/.env:**
