@@ -37,6 +37,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [token]);
 
+  // Clear authentication state when token is invalid
+  const clearAuthState = async () => {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    apiService.setToken(null);
+    setToken(null);
+    setUser(null);
+  };
+
   const loadToken = async () => {
     try {
       const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
@@ -48,10 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(currentUser);
         } catch (error) {
           // Token is invalid/expired, clear it
-          await AsyncStorage.removeItem(TOKEN_KEY);
-          apiService.setToken(null);
-          setToken(null);
-          setUser(null);
+          await clearAuthState();
           console.error('Error loading token:', error);
         }
       }
@@ -92,12 +97,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const currentUser = await apiService.getCurrentUser();
         setUser(currentUser);
       } catch (error) {
-        // Token is invalid/expired, clear it
-        await AsyncStorage.removeItem(TOKEN_KEY);
-        apiService.setToken(null);
-        setToken(null);
-        setUser(null);
-        throw error; // Re-throw so caller can handle if needed
+        // Token is invalid/expired, clear it and re-throw
+        await clearAuthState();
+        throw error;
       }
     }
   };
