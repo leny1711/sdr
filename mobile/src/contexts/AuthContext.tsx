@@ -43,8 +43,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (storedToken) {
         setToken(storedToken);
         apiService.setToken(storedToken);
-        const currentUser = await apiService.getCurrentUser();
-        setUser(currentUser);
+        try {
+          const currentUser = await apiService.getCurrentUser();
+          setUser(currentUser);
+        } catch (error) {
+          // Token is invalid/expired, clear it
+          await AsyncStorage.removeItem(TOKEN_KEY);
+          apiService.setToken(null);
+          setToken(null);
+          setUser(null);
+          console.error('Error loading token:', error);
+        }
       }
     } catch (error) {
       console.error('Error loading token:', error);
