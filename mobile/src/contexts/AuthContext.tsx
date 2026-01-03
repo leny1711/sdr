@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error) {
           // Token is invalid/expired, clear it
           await clearAuthState();
-          console.error('Error loading token:', error);
+          console.error('Token validation failed:', error);
         }
       }
     } catch (error) {
@@ -98,6 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentUser);
       } catch (error) {
         // Token is invalid/expired, clear it and re-throw
+        console.error('Token validation failed:', error);
         await clearAuthState();
         throw error;
       }
