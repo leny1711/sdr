@@ -37,14 +37,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [token]);
 
+  // Clear authentication state when token is invalid
+  const clearAuthState = async () => {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    apiService.setToken(null);
+    setToken(null);
+    setUser(null);
+  };
+
   const loadToken = async () => {
     try {
       const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
       if (storedToken) {
         setToken(storedToken);
         apiService.setToken(storedToken);
-        const currentUser = await apiService.getCurrentUser();
-        setUser(currentUser);
+        try {
+          const currentUser = await apiService.getCurrentUser();
+          setUser(currentUser);
+        } catch (error) {
+          // Token is invalid/expired, clear it
+          await clearAuthState();
+          console.error('Token validation failed:', error);
+        }
       }
     } catch (error) {
       console.error('Error loading token:', error);
@@ -79,8 +93,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshUser = async () => {
     if (token) {
-      const currentUser = await apiService.getCurrentUser();
-      setUser(currentUser);
+      try {
+        const currentUser = await apiService.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        // Token is invalid/expired, clear it and re-throw
+        console.error('Token validation failed:', error);
+        await clearAuthState();
+        throw error;
+      }
     }
   };
 
