@@ -88,8 +88,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshUser = async () => {
     if (token) {
-      const currentUser = await apiService.getCurrentUser();
-      setUser(currentUser);
+      try {
+        const currentUser = await apiService.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        // Token is invalid/expired, clear it
+        await AsyncStorage.removeItem(TOKEN_KEY);
+        apiService.setToken(null);
+        setToken(null);
+        setUser(null);
+        throw error; // Re-throw so caller can handle if needed
+      }
     }
   };
 
