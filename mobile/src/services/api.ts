@@ -76,17 +76,27 @@ class ApiService {
     return response;
   }
 
-  async likeUser(targetUserId: string): Promise<{ match: boolean; conversation?: Conversation }> {
-    const response = await this.api.post<{ match: boolean; conversation?: Conversation }>(
+  async likeUser(toUserId: string): Promise<{ match: boolean; matchId?: string }> {
+    const response = await this.api.post<{ success: boolean; data: { matched: boolean; matchId?: string } }>(
       '/api/discovery/like',
-      { targetUserId }
+      { toUserId }
     );
-    return response.data;
+
+    const data = response.data.data;
+
+    if (!data) {
+      throw new Error('Invalid like response');
+    }
+
+    return {
+      match: data.matched,
+      matchId: data.matchId,
+    };
   }
 
-  async dislikeUser(targetUserId: string): Promise<{ success: boolean }> {
+  async dislikeUser(toUserId: string): Promise<{ success: boolean }> {
     const response = await this.api.post<{ success: boolean }>('/api/discovery/dislike', {
-      targetUserId,
+      toUserId,
     });
     return response.data;
   }
