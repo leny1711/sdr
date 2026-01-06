@@ -65,7 +65,7 @@ export interface DiscoverableUser extends User {
 }
 
 export interface LikeRequest {
-  targetUserId: string;
+  toUserId: string;
 }
 
 export interface MessageRequest {
