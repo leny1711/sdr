@@ -95,7 +95,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const currentUser = await apiService.getCurrentUser();
         setUser(currentUser);
       } catch (error) {
-        // Token is invalid/expired, clear it and re-throw
+        // Token is invalid/expired; clear it and re-throw so callers (e.g. profile refresh)
+        // can surface the failure while forcing a logout state.
         await clearAuthState();
         throw error;
       }
