@@ -82,9 +82,15 @@ class ApiService {
       { toUserId: targetUserId }
     );
 
+    const data = response.data.data;
+
+    if (!data) {
+      throw new Error('Invalid like response');
+    }
+
     return {
-      match: response.data.data?.matched ?? false,
-      matchId: response.data.data?.matchId,
+      match: data.matched,
+      matchId: data.matchId,
     };
   }
 
