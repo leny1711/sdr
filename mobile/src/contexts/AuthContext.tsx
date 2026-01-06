@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const currentUser = await apiService.getCurrentUser();
           setToken(storedToken);
           setUser(currentUser);
-        } catch {
+        } catch (_error) {
           await clearAuthState();
         }
       }
