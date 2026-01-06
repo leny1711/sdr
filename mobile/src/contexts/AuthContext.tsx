@@ -49,15 +49,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
       if (storedToken) {
-        setToken(storedToken);
         apiService.setToken(storedToken);
         try {
           const currentUser = await apiService.getCurrentUser();
+          setToken(storedToken);
           setUser(currentUser);
-        } catch (error) {
-          // Token is invalid/expired, clear it
+        } catch {
           await clearAuthState();
-          console.error('Token validation failed:', error);
         }
       }
     } catch (error) {
