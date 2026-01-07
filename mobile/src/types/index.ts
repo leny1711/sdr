@@ -11,13 +11,17 @@ export interface User {
 }
 
 export interface Match {
-  id: string;
-  userId: string;
-  matchedUserId: string;
-  conversationId: string;
+  /**
+   * Unique identifier for the match coming from the backend.
+   * Use this or the conversation.id as the stable key.
+   */
+  matchedId: string;
   createdAt: string;
-  matchedUser: User;
+  user: User;
   conversation: Conversation;
+  // Legacy fields kept optional for backward compatibility with older responses; remove once clients use the new shape everywhere.
+  matchedUser?: User;
+  conversationId?: string;
 }
 
 export interface Conversation {

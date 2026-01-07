@@ -18,21 +18,38 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
+const getMatchKey = (match: Match): string => {
+  if (match.matchedId) return match.matchedId;
+  if (match.conversation?.id) return match.conversation.id;
+  if (match.user?.id) return `user-${match.user.id}-${match.createdAt || match.conversation?.createdAt || ''}`;
+  const fallbackParts = [
+    match.createdAt,
+    match.conversation?.createdAt,
+    match.user?.id,
+    match.user?.name,
+  ]
+    .filter(Boolean)
+    .join('|');
+  return `match-${fallbackParts || 'unknown'}`;
+};
+
+const getMatchTimestamp = (match: Match) => {
+  const value = match.createdAt || match.conversation?.createdAt;
+  return value ? new Date(value).getTime() : 0;
+};
+
 const dedupeMatches = (items: Match[]) => {
   const map = new Map<string, Match>();
   items.forEach((match) => {
-    if (match?.id) {
-      const existing = map.get(match.id);
-      if (!existing) {
-        map.set(match.id, match);
-        return;
-      }
-      const existingTime = new Date(existing.createdAt).getTime();
-      const incomingTime = new Date(match.createdAt).getTime();
-      map.set(match.id, incomingTime >= existingTime ? match : existing);
-    } else {
-      console.warn('Skipping match without id', match);
+    const key = getMatchKey(match);
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, match);
+      return;
     }
+    const existingTime = getMatchTimestamp(existing);
+    const incomingTime = getMatchTimestamp(match);
+    map.set(key, incomingTime >= existingTime ? match : existing);
   });
   return Array.from(map.values());
 };
@@ -76,30 +93,43 @@ const MatchesScreen = () => {
   };
 
   const handleMatchPress = (match: Match) => {
+    const conversationId = match.conversation?.id || match.conversationId;
+    const matchedUser = match.user || match.matchedUser;
+    if (!conversationId || !matchedUser) {
+      Alert.alert('Error', 'This conversation is unavailable because match details are incomplete.');
+      return;
+    }
     navigation.navigate('Chat', {
-      conversationId: match.conversationId,
-      matchName: match.matchedUser.name,
+      conversationId,
+      matchName: matchedUser.name,
     });
   };
 
-  const renderMatch = ({ item }: { item: Match }) => (
-    <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.matchedUser.name}</Text>
-        <Text style={styles.matchDetails}>
-          {item.matchedUser.age} • {item.matchedUser.city}
-        </Text>
-        <View style={styles.revealInfo}>
-          <Text style={styles.revealText}>
-            Photo: {getRevealLevelText(item.conversation.revealLevel)}
-          </Text>
-          <Text style={styles.messageCount}>
-            {item.conversation.textMessageCount} messages
-          </Text>
+  const renderMatch = ({ item }: { item: Match }) => {
+    const matchedUser = item.user || item.matchedUser;
+    const displayName = matchedUser?.name ?? 'Unknown match';
+    const displayDetails = matchedUser
+      ? `${matchedUser.age ?? 'N/A'} • ${matchedUser.city ?? 'Unknown'}`
+      : 'Details unavailable';
+    const revealLevel = item.conversation?.revealLevel ?? 0;
+    const messageCount = item.conversation?.textMessageCount ?? 0;
+    return (
+      <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
+        <View style={styles.matchInfo}>
+          <Text style={styles.matchName}>{displayName}</Text>
+          <Text style={styles.matchDetails}>{displayDetails}</Text>
+          <View style={styles.revealInfo}>
+            <Text style={styles.revealText}>
+              Photo: {getRevealLevelText(revealLevel)}
+            </Text>
+            <Text style={styles.messageCount}>
+              {messageCount} messages
+            </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -137,7 +167,7 @@ const MatchesScreen = () => {
       <FlatList
         data={matches}
         renderItem={renderMatch}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => getMatchKey(item)}
         contentContainerStyle={styles.listContent}
       />
     </SafeAreaView>
