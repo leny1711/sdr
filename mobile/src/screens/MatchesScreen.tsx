@@ -20,6 +20,11 @@ type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
 const getMatchKey = (match: Match): string => match.conversation?.id || match.matchedId;
 
+const getMatchTimestamp = (match: Match) => {
+  const value = match.createdAt || match.conversation?.createdAt;
+  return value ? new Date(value).getTime() : -Infinity;
+};
+
 const dedupeMatches = (items: Match[]) => {
   const map = new Map<string, Match>();
   items.forEach((match) => {
@@ -30,8 +35,8 @@ const dedupeMatches = (items: Match[]) => {
         map.set(key, match);
         return;
       }
-      const existingTime = new Date(existing.createdAt || existing.conversation?.createdAt || 0).getTime();
-      const incomingTime = new Date(match.createdAt || match.conversation?.createdAt || 0).getTime();
+      const existingTime = getMatchTimestamp(existing);
+      const incomingTime = getMatchTimestamp(match);
       map.set(key, incomingTime >= existingTime ? match : existing);
     } else {
       console.warn('Skipping match without identifier', match);
@@ -91,24 +96,27 @@ const MatchesScreen = () => {
     });
   };
 
-  const renderMatch = ({ item }: { item: Match }) => (
-    <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{(item.user || item.matchedUser)?.name}</Text>
-        <Text style={styles.matchDetails}>
-          {(item.user || item.matchedUser)?.age} • {(item.user || item.matchedUser)?.city}
-        </Text>
-        <View style={styles.revealInfo}>
-          <Text style={styles.revealText}>
-            Photo: {getRevealLevelText(item.conversation.revealLevel)}
+  const renderMatch = ({ item }: { item: Match }) => {
+    const matchedUser = item.user || item.matchedUser;
+    return (
+      <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
+        <View style={styles.matchInfo}>
+          <Text style={styles.matchName}>{matchedUser?.name}</Text>
+          <Text style={styles.matchDetails}>
+            {matchedUser?.age} • {matchedUser?.city}
           </Text>
-          <Text style={styles.messageCount}>
-            {item.conversation.textMessageCount} messages
-          </Text>
+          <View style={styles.revealInfo}>
+            <Text style={styles.revealText}>
+              Photo: {getRevealLevelText(item.conversation.revealLevel)}
+            </Text>
+            <Text style={styles.messageCount}>
+              {item.conversation.textMessageCount} messages
+            </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (isLoading) {
     return (

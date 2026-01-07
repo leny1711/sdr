@@ -19,7 +19,7 @@ export interface Match {
   createdAt: string;
   user: User;
   conversation: Conversation;
-  // Legacy fields kept optional for backward compatibility with older responses
+  // Legacy fields kept optional for backward compatibility with older responses; remove once clients use the new shape everywhere.
   matchedUser?: User;
   conversationId?: string;
 }
