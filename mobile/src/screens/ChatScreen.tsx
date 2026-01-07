@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,16 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 
+const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) => {
+  const cached = cache.get(message);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const time = new Date(message.createdAt).getTime();
+  cache.set(message, time);
+  return time;
+};
+
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();
   const { conversationId, matchName } = route.params;
@@ -36,18 +46,28 @@ const ChatScreen = () => {
 
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const messageTimestampCache = useRef(new WeakMap<Message, number>()).current;
 
-  const dedupeMessages = (items: Message[]) => {
-    const map = new Map<string, Message>();
-    items.forEach((message) => {
-      if (message?.id) {
-        map.set(message.id, message);
-      }
-    });
-    return Array.from(map.values()).sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-  };
+  const dedupeMessages = useCallback(
+    (items: Message[]) => {
+      const map = new Map<string, { message: Message; timestamp: number }>();
+      items.forEach((message) => {
+        if (message?.id) {
+          const timestamp = getMessageTimestamp(message, messageTimestampCache);
+          const existing = map.get(message.id);
+          if (!existing || timestamp >= existing.timestamp) {
+            map.set(message.id, { message, timestamp });
+          }
+        } else {
+          console.warn('Skipping message without id', message);
+        }
+      });
+      return Array.from(map.values())
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .map(({ message }) => message);
+    },
+    [messageTimestampCache]
+  );
 
   useEffect(() => {
     loadConversation();
@@ -87,7 +107,7 @@ const ChatScreen = () => {
       socketService.offNewMessage(handleNewMessage);
       socketService.offUserTyping(handleTyping);
     };
-  }, [conversationId, user?.id]);
+  }, [conversationId, user?.id, dedupeMessages]);
 
   const loadConversation = async () => {
     try {

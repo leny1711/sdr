@@ -18,20 +18,29 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
+const dedupeMatches = (items: Match[]) => {
+  const map = new Map<string, Match>();
+  items.forEach((match) => {
+    if (match?.id) {
+      const existing = map.get(match.id);
+      if (!existing) {
+        map.set(match.id, match);
+        return;
+      }
+      const existingTime = new Date(existing.createdAt).getTime();
+      const incomingTime = new Date(match.createdAt).getTime();
+      map.set(match.id, incomingTime >= existingTime ? match : existing);
+    } else {
+      console.warn('Skipping match without id', match);
+    }
+  });
+  return Array.from(map.values());
+};
+
 const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation<NavigationProp>();
-
-  const dedupeMatches = (items: Match[]) => {
-    const map = new Map<string, Match>();
-    items.forEach((match) => {
-      if (match?.id) {
-        map.set(match.id, match);
-      }
-    });
-    return Array.from(map.values());
-  };
 
   useFocusEffect(
     useCallback(() => {
