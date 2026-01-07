@@ -172,17 +172,21 @@ const ChatScreen = () => {
   const handleSend = async () => {
     if (!ensureConversation()) return;
     if (!inputText.trim() || isSending) return;
+    if (!user?.id) {
+      Alert.alert('Error', 'Unable to send message: User not authenticated');
+      return;
+    }
 
     const messageText = inputText.trim();
     setInputText('');
     setIsSending(true);
 
-    // Optimistic UI: Create temporary message
-    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    // Optimistic UI: Create temporary message with unique ID
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     const optimisticMessage: Message = {
       id: tempId,
       conversationId,
-      senderId: user?.id || '',
+      senderId: user.id,
       type: 'TEXT',
       content: messageText,
       createdAt: new Date().toISOString(),
