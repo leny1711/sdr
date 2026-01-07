@@ -21,6 +21,7 @@ import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
+const conversationUnavailableMessage = 'This conversation is unavailable.';
 
 const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) => {
   const cached = cache.get(message);
@@ -34,8 +35,9 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
 
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();
-  const matchName = route.params?.matchName ?? '';
-  const conversationId = route.params?.conversationId?.trim?.() ?? '';
+  const { conversationId: routeConversationId, matchName } = route.params;
+  const conversationId =
+    typeof routeConversationId === 'string' ? routeConversationId.trim() || undefined : undefined;
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -70,10 +72,17 @@ const ChatScreen = () => {
     [messageTimestampCache]
   );
 
-  useEffect(() => {
+  const ensureConversation = () => {
     if (!conversationId) {
+      Alert.alert('Error', conversationUnavailableMessage);
+      return false;
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    if (!ensureConversation()) {
       setIsLoading(false);
-      Alert.alert('Error', 'This conversation is unavailable.');
       return;
     }
 
@@ -129,11 +138,7 @@ const ChatScreen = () => {
   };
 
   const loadMessages = async () => {
-    if (!conversationId) {
-      setIsLoading(false);
-      Alert.alert('Error', 'This conversation is unavailable.');
-      return;
-    }
+    if (!conversationId) return;
     try {
       setIsLoading(true);
       const data = await apiService.getMessages(conversationId);
@@ -153,10 +158,7 @@ const ChatScreen = () => {
   };
 
   const handleSend = async () => {
-    if (!conversationId) {
-      Alert.alert('Error', 'This conversation is unavailable.');
-      return;
-    }
+    if (!ensureConversation()) return;
     if (!inputText.trim() || isSending) return;
 
     const messageText = inputText.trim();
@@ -179,8 +181,7 @@ const ChatScreen = () => {
 
   const handleInputChange = (text: string) => {
     setInputText(text);
-
-    if (!conversationId) return;
+    if (!ensureConversation()) return;
 
     // Send typing indicator
     if (text.length > 0) {
