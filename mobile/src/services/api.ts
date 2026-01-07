@@ -61,19 +61,19 @@ class ApiService {
   // User Profile
   async getProfile(userId?: string): Promise<User> {
     const url = userId ? `/api/users/profile/${userId}` : '/api/users/profile';
-    const response = await this.api.get<User>(url);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: User }>(url);
+    return response.data.data;
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await this.api.put<User>('/api/users/profile', data);
-    return response.data;
+    const response = await this.api.put<{ success: boolean; data: User }>('/api/users/profile', data);
+    return response.data.data;
   }
 
   // Discovery
-  async getDiscoverableUsers() {
-    const response = await this.api.get<DiscoverableUser[]>('/api/discovery');
-    return response;
+  async getDiscoverableUsers(): Promise<DiscoverableUser[]> {
+    const response = await this.api.get<{ success: boolean; data: DiscoverableUser[] }>('/api/discovery');
+    return response.data.data;
   }
 
   async likeUser(toUserId: string): Promise<{ match: boolean; matchId?: string }> {
@@ -95,10 +95,10 @@ class ApiService {
   }
 
   async dislikeUser(toUserId: string): Promise<{ success: boolean }> {
-    const response = await this.api.post<{ success: boolean }>('/api/discovery/dislike', {
+    const response = await this.api.post<{ success: boolean; data: any }>('/api/discovery/dislike', {
       toUserId,
     });
-    return response.data;
+    return { success: response.data.success };
   }
 
   // Matches
@@ -121,19 +121,19 @@ class ApiService {
 
   // Conversations
   async getConversation(conversationId: string): Promise<Conversation> {
-    const response = await this.api.get<Conversation>(`/api/conversations/${conversationId}`);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Conversation }>(`/api/conversations/${conversationId}`);
+    return response.data.data;
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    const response = await this.api.get<Message[]>(`/api/conversations/${conversationId}/messages`);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Message[] }>(`/api/conversations/${conversationId}/messages`);
+    return response.data.data;
   }
 
   // Messages
   async sendTextMessage(data: MessageRequest): Promise<Message> {
-    const response = await this.api.post<Message>('/api/messages/text', data);
-    return response.data;
+    const response = await this.api.post<{ success: boolean; data: Message }>('/api/messages/text', data);
+    return response.data.data;
   }
 }
 

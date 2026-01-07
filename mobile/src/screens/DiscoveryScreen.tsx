@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import apiService from '../services/api';
@@ -18,6 +19,8 @@ const DiscoveryScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [matchBanner, setMatchBanner] = useState<{ show: boolean; name: string }>({ show: false, name: '' });
+  const [bannerOpacity] = useState(new Animated.Value(0));
 
   useEffect(() => {
     loadUsers();
@@ -26,14 +29,33 @@ const DiscoveryScreen = () => {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getDiscoverableUsers();
-      setUsers(response.data.data);
+      const data = await apiService.getDiscoverableUsers();
+      setUsers(data);
       setCurrentIndex(0);
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load profiles');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const showMatchBanner = (name: string) => {
+    setMatchBanner({ show: true, name });
+    Animated.sequence([
+      Animated.timing(bannerOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(3000),
+      Animated.timing(bannerOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setMatchBanner({ show: false, name: '' });
+    });
   };
 
   const handleLike = async () => {
@@ -45,14 +67,9 @@ const DiscoveryScreen = () => {
       const response = await apiService.likeUser(currentUser.id);
 
       if (response.match) {
-        Alert.alert(
-          "It's a Match! 🎉",
-          `You and ${currentUser.name} matched! Start chatting to reveal their photo.`,
-          [{ text: 'OK', onPress: () => moveToNext() }]
-        );
-      } else {
-        moveToNext();
+        showMatchBanner(currentUser.name);
       }
+      moveToNext();
     } catch (error: any) {
       Alert.alert('Error', 'Failed to like user');
     } finally {
@@ -115,6 +132,15 @@ const DiscoveryScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {matchBanner.show && (
+        <Animated.View style={[styles.matchBanner, { opacity: bannerOpacity }]}>
+          <Text style={styles.matchBannerTitle}>🎉 It's a Match! 🎉</Text>
+          <Text style={styles.matchBannerText}>
+            You and {matchBanner.name} matched! Start chatting to reveal their photo.
+          </Text>
+        </Animated.View>
+      )}
+      
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discovery</Text>
         <Text style={styles.counter}>
@@ -160,6 +186,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bgPrimary,
+  },
+  matchBanner: {
+    position: 'absolute',
+    top: 20,
+    left: Spacing.lg,
+    right: Spacing.lg,
+    backgroundColor: Colors.buttonPrimary,
+    padding: Spacing.lg,
+    borderRadius: 12,
+    zIndex: 1000,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  matchBannerTitle: {
+    fontSize: Typography.xl,
+    fontFamily: Typography.fontSerif,
+    color: Colors.bgPrimary,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  matchBannerText: {
+    fontSize: Typography.base,
+    fontFamily: Typography.fontSans,
+    color: Colors.bgPrimary,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',

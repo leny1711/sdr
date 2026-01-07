@@ -69,7 +69,14 @@ const MatchesScreen = () => {
     try {
       setIsLoading(true);
       const data = await apiService.getMatches();
-      setMatches(dedupeMatches(data));
+      // Add guard to ensure data is an array
+      if (Array.isArray(data)) {
+        setMatches(dedupeMatches(data));
+      } else {
+        console.error('Invalid matches data received:', data);
+        Alert.alert('Error', 'Failed to load matches: Invalid data format');
+        setMatches([]);
+      }
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load matches');
     } finally {

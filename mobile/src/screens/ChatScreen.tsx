@@ -53,6 +53,11 @@ const ChatScreen = () => {
 
   const dedupeMessages = useCallback(
     (items: Message[]) => {
+      // Guard: ensure items is an array
+      if (!Array.isArray(items)) {
+        console.error('dedupeMessages called with non-array:', items);
+        return [];
+      }
       const map = new Map<string, { message: Message; timestamp: number }>();
       items.forEach((message) => {
         if (message?.id) {
@@ -142,7 +147,14 @@ const ChatScreen = () => {
     try {
       setIsLoading(true);
       const data = await apiService.getMessages(conversationId);
-      setMessages(dedupeMessages(data));
+      // Add guard to ensure data is an array
+      if (Array.isArray(data)) {
+        setMessages(dedupeMessages(data));
+      } else {
+        console.error('Invalid messages data received:', data);
+        Alert.alert('Error', 'Failed to load messages: Invalid data format');
+        setMessages([]);
+      }
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load messages');
     } finally {
