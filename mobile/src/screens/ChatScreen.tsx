@@ -34,7 +34,8 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
 
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();
-  const { conversationId, matchName } = route.params;
+  const matchName = route.params?.matchName ?? '';
+  const conversationId = route.params?.conversationId?.trim?.() ?? '';
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -70,9 +71,15 @@ const ChatScreen = () => {
   );
 
   useEffect(() => {
+    if (!conversationId) {
+      setIsLoading(false);
+      Alert.alert('Error', 'This conversation is unavailable.');
+      return;
+    }
+
     loadConversation();
     loadMessages();
-    
+
     // Join conversation room
     socketService.joinConversation(conversationId);
 
@@ -103,13 +110,16 @@ const ChatScreen = () => {
     socketService.onUserTyping(handleTyping);
 
     return () => {
-      socketService.leaveConversation(conversationId);
+      if (conversationId) {
+        socketService.leaveConversation(conversationId);
+      }
       socketService.offNewMessage(handleNewMessage);
       socketService.offUserTyping(handleTyping);
     };
   }, [conversationId, user?.id, dedupeMessages]);
 
   const loadConversation = async () => {
+    if (!conversationId) return;
     try {
       const data = await apiService.getConversation(conversationId);
       setConversation(data);
@@ -119,6 +129,11 @@ const ChatScreen = () => {
   };
 
   const loadMessages = async () => {
+    if (!conversationId) {
+      setIsLoading(false);
+      Alert.alert('Error', 'This conversation is unavailable.');
+      return;
+    }
     try {
       setIsLoading(true);
       const data = await apiService.getMessages(conversationId);
@@ -138,6 +153,10 @@ const ChatScreen = () => {
   };
 
   const handleSend = async () => {
+    if (!conversationId) {
+      Alert.alert('Error', 'This conversation is unavailable.');
+      return;
+    }
     if (!inputText.trim() || isSending) return;
 
     const messageText = inputText.trim();
@@ -160,6 +179,8 @@ const ChatScreen = () => {
 
   const handleInputChange = (text: string) => {
     setInputText(text);
+
+    if (!conversationId) return;
 
     // Send typing indicator
     if (text.length > 0) {

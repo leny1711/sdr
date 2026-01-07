@@ -93,7 +93,7 @@ const MatchesScreen = () => {
   };
 
   const handleMatchPress = (match: Match) => {
-    const conversationId = match.conversation?.id || match.conversationId;
+    const conversationId = match.conversation?.id;
     const matchedUser = match.user || match.matchedUser;
     if (!conversationId || !matchedUser) {
       Alert.alert('Error', 'This conversation is unavailable because match details are incomplete.');
