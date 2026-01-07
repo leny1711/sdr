@@ -83,6 +83,8 @@ Frontend will run on: http://localhost:5173
 ```bash
 cd mobile
 npm install
+# Align Expo + screens versions
+npx expo install expo react-native-screens
 # ⚠️ IMPORTANT: Edit mobile/src/config/api.ts with your IP address (see above)
 npx expo start
 ```

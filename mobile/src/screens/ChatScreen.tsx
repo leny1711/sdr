@@ -37,6 +37,18 @@ const ChatScreen = () => {
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const dedupeMessages = (items: Message[]) => {
+    const map = new Map<string, Message>();
+    items.forEach((message) => {
+      if (message?.id) {
+        map.set(message.id, message);
+      }
+    });
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  };
+
   useEffect(() => {
     loadConversation();
     loadMessages();
@@ -46,7 +58,7 @@ const ChatScreen = () => {
 
     // Listen for new messages
     const handleNewMessage = (message: Message) => {
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => dedupeMessages([...prev, message]));
       // Update conversation message count
       if (message.type === 'TEXT') {
         setConversation((prev) => {
@@ -90,7 +102,7 @@ const ChatScreen = () => {
     try {
       setIsLoading(true);
       const data = await apiService.getMessages(conversationId);
-      setMessages(data);
+      setMessages(dedupeMessages(data));
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load messages');
     } finally {

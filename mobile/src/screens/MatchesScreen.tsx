@@ -23,6 +23,16 @@ const MatchesScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation<NavigationProp>();
 
+  const dedupeMatches = (items: Match[]) => {
+    const map = new Map<string, Match>();
+    items.forEach((match) => {
+      if (match?.id) {
+        map.set(match.id, match);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadMatches();
@@ -33,7 +43,7 @@ const MatchesScreen = () => {
     try {
       setIsLoading(true);
       const data = await apiService.getMatches();
-      setMatches(data);
+      setMatches(dedupeMatches(data));
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load matches');
     } finally {
@@ -118,7 +128,7 @@ const MatchesScreen = () => {
       <FlatList
         data={matches}
         renderItem={renderMatch}
-        keyExtractor={(item) => item.conversationId}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
       />
     </SafeAreaView>
