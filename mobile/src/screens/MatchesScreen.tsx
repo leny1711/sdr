@@ -118,7 +118,7 @@ const MatchesScreen = () => {
       <FlatList
         data={matches}
         renderItem={renderMatch}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id || item.conversationId}
         contentContainerStyle={styles.listContent}
       />
     </SafeAreaView>
