@@ -22,7 +22,7 @@ const getMatchKey = (match: Match): string => {
   if (match.matchedId) return match.matchedId;
   if (match.conversation?.id) return match.conversation.id;
   if (match.user?.id) return `user-${match.user.id}-${match.createdAt || match.conversation?.createdAt || ''}`;
-  return `match-${match.createdAt || 'unknown'}`;
+  return `match-${match.createdAt || match.conversation?.createdAt || JSON.stringify(match)}`;
 };
 
 const getMatchTimestamp = (match: Match) => {
@@ -99,13 +99,13 @@ const MatchesScreen = () => {
 
   const renderMatch = ({ item }: { item: Match }) => {
     const matchedUser = item.user || item.matchedUser;
+    const displayName = matchedUser?.name ?? 'Unknown match';
+    const displayDetails = matchedUser ? `${matchedUser.age} • ${matchedUser.city}` : 'Details unavailable';
     return (
       <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
         <View style={styles.matchInfo}>
-          <Text style={styles.matchName}>{matchedUser?.name}</Text>
-          <Text style={styles.matchDetails}>
-            {matchedUser?.age} • {matchedUser?.city}
-          </Text>
+          <Text style={styles.matchName}>{displayName}</Text>
+          <Text style={styles.matchDetails}>{displayDetails}</Text>
           <View style={styles.revealInfo}>
             <Text style={styles.revealText}>
               Photo: {getRevealLevelText(item.conversation.revealLevel)}
