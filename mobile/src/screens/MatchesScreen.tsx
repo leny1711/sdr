@@ -18,7 +18,12 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
-const getMatchKey = (match: Match): string => match.matchedId || match.conversation?.id;
+const getMatchKey = (match: Match): string => {
+  if (match.matchedId) return match.matchedId;
+  if (match.conversation?.id) return match.conversation.id;
+  if (match.user?.id) return `user-${match.user.id}-${match.createdAt || match.conversation?.createdAt || ''}`;
+  return `match-${match.createdAt || 'unknown'}`;
+};
 
 const getMatchTimestamp = (match: Match) => {
   const value = match.createdAt || match.conversation?.createdAt;
@@ -29,18 +34,14 @@ const dedupeMatches = (items: Match[]) => {
   const map = new Map<string, Match>();
   items.forEach((match) => {
     const key = getMatchKey(match);
-    if (key) {
-      const existing = map.get(key);
-      if (!existing) {
-        map.set(key, match);
-        return;
-      }
-      const existingTime = getMatchTimestamp(existing);
-      const incomingTime = getMatchTimestamp(match);
-      map.set(key, incomingTime >= existingTime ? match : existing);
-    } else {
-      console.warn('Skipping match without matchedId or conversation.id identifier', match);
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, match);
+      return;
     }
+    const existingTime = getMatchTimestamp(existing);
+    const incomingTime = getMatchTimestamp(match);
+    map.set(key, incomingTime >= existingTime ? match : existing);
   });
   return Array.from(map.values());
 };
