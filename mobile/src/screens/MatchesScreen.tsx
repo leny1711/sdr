@@ -25,6 +25,7 @@ const getMatchKey = (match: Match): string => {
   const fallbackParts = [
     match.createdAt,
     match.conversation?.createdAt,
+    match.user?.id,
     match.user?.name,
   ]
     .filter(Boolean)
@@ -95,7 +96,7 @@ const MatchesScreen = () => {
     const conversationId = match.conversation?.id || match.conversationId;
     const matchedUser = match.user || match.matchedUser;
     if (!conversationId || !matchedUser) {
-      Alert.alert('Error', 'Unable to open chat: conversation or user data not available.');
+      Alert.alert('Error', 'This conversation is unavailable because match details are incomplete.');
       return;
     }
     navigation.navigate('Chat', {
