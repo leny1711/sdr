@@ -103,8 +103,8 @@ class ApiService {
 
   // Matches
   async getMatches(): Promise<Match[]> {
-    const response = await this.api.get<Match[]>('/api/matches');
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Match[] }>('/api/matches');
+    return response.data.data;
   }
 
   // Conversations
