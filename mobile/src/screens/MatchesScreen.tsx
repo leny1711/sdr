@@ -18,11 +18,11 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
-const getMatchKey = (match: Match): string => match.conversation?.id || match.matchedId;
+const getMatchKey = (match: Match): string => match.matchedId || match.conversation?.id;
 
 const getMatchTimestamp = (match: Match) => {
   const value = match.createdAt || match.conversation?.createdAt;
-  return value ? new Date(value).getTime() : -Infinity;
+  return value ? new Date(value).getTime() : 0;
 };
 
 const dedupeMatches = (items: Match[]) => {
@@ -39,7 +39,7 @@ const dedupeMatches = (items: Match[]) => {
       const incomingTime = getMatchTimestamp(match);
       map.set(key, incomingTime >= existingTime ? match : existing);
     } else {
-      console.warn('Skipping match without identifier', match);
+      console.warn('Skipping match without matchedId or conversation.id identifier', match);
     }
   });
   return Array.from(map.values());
