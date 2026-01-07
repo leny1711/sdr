@@ -96,6 +96,7 @@ class ApiService {
 
   /**
    * Dislike a user. The response data is not currently used by the UI.
+   * Response type uses 'unknown' to acknowledge data exists but is unused.
    */
   async dislikeUser(toUserId: string): Promise<void> {
     await this.api.post<{ success: boolean; data: unknown }>('/api/discovery/dislike', {

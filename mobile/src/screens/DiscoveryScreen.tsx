@@ -26,10 +26,11 @@ interface MatchBannerState {
 
 /**
  * Sanitize user name for safe display.
- * React Native Text components don't interpret HTML/JS, but we still sanitize as best practice.
+ * React Native Text components render plain text only - they don't execute JS or interpret HTML.
+ * XSS is not possible in React Native Text. We sanitize for UI/layout purposes only.
  */
 const sanitizeName = (name: string): string => {
-  // Trim whitespace and limit length to prevent UI issues
+  // Trim whitespace and limit length to prevent UI overflow
   return name.trim().slice(0, MAX_DISPLAY_NAME_LENGTH);
 };
 
@@ -61,6 +62,7 @@ const DiscoveryScreen = () => {
 
   const showMatchBanner = (name: string) => {
     // Stop any ongoing animation to prevent overlap
+    // This is the recommended React Native pattern - stop() immediately halts animation
     if (bannerAnimationRef.current) {
       bannerAnimationRef.current.stop();
     }
