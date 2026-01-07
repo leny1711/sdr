@@ -14,12 +14,30 @@ import apiService from '../services/api';
 import { DiscoverableUser } from '../types';
 import { Colors, Typography, Spacing } from '../constants/theme';
 
+// Animation timing constants
+const BANNER_FADE_DURATION = 300; // milliseconds
+const BANNER_DISPLAY_DURATION = 3000; // milliseconds
+
+interface MatchBannerState {
+  show: boolean;
+  name: string;
+}
+
+/**
+ * Sanitize user name for safe display.
+ * React Native Text components don't interpret HTML/JS, but we still sanitize as best practice.
+ */
+const sanitizeName = (name: string): string => {
+  // Trim whitespace and limit length to prevent UI issues
+  return name.trim().slice(0, 50);
+};
+
 const DiscoveryScreen = () => {
   const [users, setUsers] = useState<DiscoverableUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [matchBanner, setMatchBanner] = useState<{ show: boolean; name: string }>({ show: false, name: '' });
+  const [matchBanner, setMatchBanner] = useState<MatchBannerState>({ show: false, name: '' });
   const [bannerOpacity] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -40,17 +58,18 @@ const DiscoveryScreen = () => {
   };
 
   const showMatchBanner = (name: string) => {
-    setMatchBanner({ show: true, name });
+    const safeName = sanitizeName(name);
+    setMatchBanner({ show: true, name: safeName });
     Animated.sequence([
       Animated.timing(bannerOpacity, {
         toValue: 1,
-        duration: 300,
+        duration: BANNER_FADE_DURATION,
         useNativeDriver: true,
       }),
-      Animated.delay(3000),
+      Animated.delay(BANNER_DISPLAY_DURATION),
       Animated.timing(bannerOpacity, {
         toValue: 0,
-        duration: 300,
+        duration: BANNER_FADE_DURATION,
         useNativeDriver: true,
       }),
     ]).start(() => {
