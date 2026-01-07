@@ -23,11 +23,13 @@ const getMatchKey = (match: Match): string => {
   if (match.conversation?.id) return match.conversation.id;
   if (match.user?.id) return `user-${match.user.id}-${match.createdAt || match.conversation?.createdAt || ''}`;
   const fallbackParts = [
-    match.createdAt || '',
-    match.conversation?.createdAt || '',
-    match.user?.name || '',
-    match.user?.email || '',
-  ].join('|');
+    match.createdAt,
+    match.conversation?.createdAt,
+    match.user?.email,
+    match.user?.name,
+  ]
+    .filter(Boolean)
+    .join('|');
   return `match-${fallbackParts || 'unknown'}`;
 };
 
@@ -106,7 +108,9 @@ const MatchesScreen = () => {
   const renderMatch = ({ item }: { item: Match }) => {
     const matchedUser = item.user || item.matchedUser;
     const displayName = matchedUser?.name ?? 'Unknown match';
-    const displayDetails = matchedUser ? `${matchedUser.age} • ${matchedUser.city}` : 'Details unavailable';
+    const displayDetails = matchedUser
+      ? `${matchedUser.age ?? 'N/A'} • ${matchedUser.city ?? 'Unknown'}`
+      : 'Details unavailable';
     const revealLevel = item.conversation?.revealLevel ?? 0;
     const messageCount = item.conversation?.textMessageCount ?? 0;
     return (
