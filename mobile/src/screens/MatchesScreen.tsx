@@ -18,6 +18,25 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
+const dedupeMatches = (items: Match[]) => {
+  const map = new Map<string, Match>();
+  items.forEach((match) => {
+    if (match?.id) {
+      const existing = map.get(match.id);
+      if (!existing) {
+        map.set(match.id, match);
+        return;
+      }
+      const existingTime = new Date(existing.createdAt).getTime();
+      const incomingTime = new Date(match.createdAt).getTime();
+      map.set(match.id, incomingTime >= existingTime ? match : existing);
+    } else {
+      console.warn('Skipping match without id', match);
+    }
+  });
+  return Array.from(map.values());
+};
+
 const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +52,7 @@ const MatchesScreen = () => {
     try {
       setIsLoading(true);
       const data = await apiService.getMatches();
-      setMatches(data);
+      setMatches(dedupeMatches(data));
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load matches');
     } finally {
@@ -118,7 +137,7 @@ const MatchesScreen = () => {
       <FlatList
         data={matches}
         renderItem={renderMatch}
-        keyExtractor={(item) => item.conversationId}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
       />
     </SafeAreaView>
