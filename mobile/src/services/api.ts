@@ -98,7 +98,7 @@ class ApiService {
    * Dislike a user. The response data is not currently used by the UI.
    */
   async dislikeUser(toUserId: string): Promise<void> {
-    await this.api.post<{ success: boolean; data: any }>('/api/discovery/dislike', {
+    await this.api.post<{ success: boolean; data: unknown }>('/api/discovery/dislike', {
       toUserId,
     });
   }

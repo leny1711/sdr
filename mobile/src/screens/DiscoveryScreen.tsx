@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 // Animation timing constants
 const BANNER_FADE_DURATION = 300; // milliseconds
 const BANNER_DISPLAY_DURATION = 3000; // milliseconds
+const MAX_DISPLAY_NAME_LENGTH = 50; // characters
 
 interface MatchBannerState {
   show: boolean;
@@ -29,7 +30,7 @@ interface MatchBannerState {
  */
 const sanitizeName = (name: string): string => {
   // Trim whitespace and limit length to prevent UI issues
-  return name.trim().slice(0, 50);
+  return name.trim().slice(0, MAX_DISPLAY_NAME_LENGTH);
 };
 
 const DiscoveryScreen = () => {
@@ -39,6 +40,7 @@ const DiscoveryScreen = () => {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [matchBanner, setMatchBanner] = useState<MatchBannerState>({ show: false, name: '' });
   const [bannerOpacity] = useState(new Animated.Value(0));
+  const bannerAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -58,9 +60,15 @@ const DiscoveryScreen = () => {
   };
 
   const showMatchBanner = (name: string) => {
+    // Stop any ongoing animation to prevent overlap
+    if (bannerAnimationRef.current) {
+      bannerAnimationRef.current.stop();
+    }
+
     const safeName = sanitizeName(name);
     setMatchBanner({ show: true, name: safeName });
-    Animated.sequence([
+    
+    const animation = Animated.sequence([
       Animated.timing(bannerOpacity, {
         toValue: 1,
         duration: BANNER_FADE_DURATION,
@@ -72,8 +80,12 @@ const DiscoveryScreen = () => {
         duration: BANNER_FADE_DURATION,
         useNativeDriver: true,
       }),
-    ]).start(() => {
+    ]);
+    
+    bannerAnimationRef.current = animation;
+    animation.start(() => {
       setMatchBanner({ show: false, name: '' });
+      bannerAnimationRef.current = null;
     });
   };
 
