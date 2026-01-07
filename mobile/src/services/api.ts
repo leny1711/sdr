@@ -103,8 +103,20 @@ class ApiService {
 
   // Matches
   async getMatches(): Promise<Match[]> {
-    const response = await this.api.get<{ success: boolean; data: Match[] }>('/api/matches');
-    return response.data.data;
+    const response = await this.api.get<{ success: boolean; data: Match[]; error?: string }>('/api/matches');
+    const responseData = response.data;
+
+    if (!responseData) {
+      throw new Error('Failed to retrieve matches: Empty response');
+    }
+
+    const { success, data, error } = responseData;
+
+    if (!success) {
+      throw new Error(`Failed to retrieve matches: ${error || 'API returned unsuccessful response'}`);
+    }
+
+    return data;
   }
 
   // Conversations
