@@ -69,6 +69,8 @@ const DiscoveryScreen = () => {
       if (response.match) {
         showMatchBanner(currentUser.name);
       }
+      // Move to next profile immediately - don't block user interaction
+      // The match banner will float above for 3 seconds without interrupting swiping
       moveToNext();
     } catch (error: any) {
       Alert.alert('Error', 'Failed to like user');
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
   },
   matchBanner: {
     position: 'absolute',
-    top: 20,
+    top: Spacing.lg, // Inside SafeAreaView, so safe area already accounted for
     left: Spacing.lg,
     right: Spacing.lg,
     backgroundColor: Colors.buttonPrimary,

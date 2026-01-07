@@ -94,11 +94,11 @@ class ApiService {
     };
   }
 
-  async dislikeUser(toUserId: string): Promise<{ success: boolean }> {
+  async dislikeUser(toUserId: string): Promise<any> {
     const response = await this.api.post<{ success: boolean; data: any }>('/api/discovery/dislike', {
       toUserId,
     });
-    return { success: response.data.success };
+    return response.data.data;
   }
 
   // Matches
