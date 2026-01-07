@@ -18,20 +18,23 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
+const getMatchKey = (match: Match): string => match.conversation?.id || match.matchedId;
+
 const dedupeMatches = (items: Match[]) => {
   const map = new Map<string, Match>();
   items.forEach((match) => {
-    if (match?.id) {
-      const existing = map.get(match.id);
+    const key = getMatchKey(match);
+    if (key) {
+      const existing = map.get(key);
       if (!existing) {
-        map.set(match.id, match);
+        map.set(key, match);
         return;
       }
-      const existingTime = new Date(existing.createdAt).getTime();
-      const incomingTime = new Date(match.createdAt).getTime();
-      map.set(match.id, incomingTime >= existingTime ? match : existing);
+      const existingTime = new Date(existing.createdAt || existing.conversation?.createdAt || 0).getTime();
+      const incomingTime = new Date(match.createdAt || match.conversation?.createdAt || 0).getTime();
+      map.set(key, incomingTime >= existingTime ? match : existing);
     } else {
-      console.warn('Skipping match without id', match);
+      console.warn('Skipping match without identifier', match);
     }
   });
   return Array.from(map.values());
@@ -76,18 +79,24 @@ const MatchesScreen = () => {
   };
 
   const handleMatchPress = (match: Match) => {
+    const conversationId = match.conversation?.id || match.conversationId;
+    const matchedUser = match.user || match.matchedUser;
+    if (!conversationId || !matchedUser) {
+      Alert.alert('Error', 'Match is missing required information.');
+      return;
+    }
     navigation.navigate('Chat', {
-      conversationId: match.conversationId,
-      matchName: match.matchedUser.name,
+      conversationId,
+      matchName: matchedUser.name,
     });
   };
 
   const renderMatch = ({ item }: { item: Match }) => (
     <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
       <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.matchedUser.name}</Text>
+        <Text style={styles.matchName}>{(item.user || item.matchedUser)?.name}</Text>
         <Text style={styles.matchDetails}>
-          {item.matchedUser.age} • {item.matchedUser.city}
+          {(item.user || item.matchedUser)?.age} • {(item.user || item.matchedUser)?.city}
         </Text>
         <View style={styles.revealInfo}>
           <Text style={styles.revealText}>
@@ -137,7 +146,7 @@ const MatchesScreen = () => {
       <FlatList
         data={matches}
         renderItem={renderMatch}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => getMatchKey(item)}
         contentContainerStyle={styles.listContent}
       />
     </SafeAreaView>
