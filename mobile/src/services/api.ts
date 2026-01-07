@@ -61,19 +61,19 @@ class ApiService {
   // User Profile
   async getProfile(userId?: string): Promise<User> {
     const url = userId ? `/api/users/profile/${userId}` : '/api/users/profile';
-    const response = await this.api.get<User>(url);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: User }>(url);
+    return response.data.data;
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await this.api.put<User>('/api/users/profile', data);
-    return response.data;
+    const response = await this.api.put<{ success: boolean; data: User }>('/api/users/profile', data);
+    return response.data.data;
   }
 
   // Discovery
-  async getDiscoverableUsers() {
-    const response = await this.api.get<DiscoverableUser[]>('/api/discovery');
-    return response;
+  async getDiscoverableUsers(): Promise<DiscoverableUser[]> {
+    const response = await this.api.get<{ success: boolean; data: DiscoverableUser[] }>('/api/discovery');
+    return response.data.data;
   }
 
   async likeUser(toUserId: string): Promise<{ match: boolean; matchId?: string }> {
@@ -94,46 +94,37 @@ class ApiService {
     };
   }
 
-  async dislikeUser(toUserId: string): Promise<{ success: boolean }> {
-    const response = await this.api.post<{ success: boolean }>('/api/discovery/dislike', {
+  /**
+   * Dislike a user. The response data is not currently used by the UI.
+   * Response type uses 'unknown' to acknowledge data exists but is unused.
+   */
+  async dislikeUser(toUserId: string): Promise<void> {
+    await this.api.post<{ success: boolean; data: unknown }>('/api/discovery/dislike', {
       toUserId,
     });
-    return response.data;
   }
 
   // Matches
   async getMatches(): Promise<Match[]> {
-    const response = await this.api.get<{ success: boolean; data: Match[]; error?: string }>('/api/matches');
-    const responseData = response.data;
-
-    if (!responseData) {
-      throw new Error('Failed to retrieve matches: Empty response');
-    }
-
-    const { success, data, error } = responseData;
-
-    if (!success) {
-      throw new Error(`Failed to retrieve matches: ${error || 'API returned unsuccessful response'}`);
-    }
-
-    return data;
+    const response = await this.api.get<{ success: boolean; data: Match[] }>('/api/matches');
+    return response.data.data;
   }
 
   // Conversations
   async getConversation(conversationId: string): Promise<Conversation> {
-    const response = await this.api.get<Conversation>(`/api/conversations/${conversationId}`);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Conversation }>(`/api/conversations/${conversationId}`);
+    return response.data.data;
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    const response = await this.api.get<Message[]>(`/api/conversations/${conversationId}/messages`);
-    return response.data;
+    const response = await this.api.get<{ success: boolean; data: Message[] }>(`/api/conversations/${conversationId}/messages`);
+    return response.data.data;
   }
 
   // Messages
   async sendTextMessage(data: MessageRequest): Promise<Message> {
-    const response = await this.api.post<Message>('/api/messages/text', data);
-    return response.data;
+    const response = await this.api.post<{ success: boolean; data: Message }>('/api/messages/text', data);
+    return response.data.data;
   }
 }
 
