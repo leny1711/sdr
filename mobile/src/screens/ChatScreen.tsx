@@ -171,6 +171,7 @@ const ChatScreen = () => {
 
   const handleSend = async () => {
     if (!ensureConversation()) return;
+    if (!conversationId) return; // Type guard for TypeScript
     if (!inputText.trim() || isSending) return;
     if (!user?.id) {
       Alert.alert('Error', 'Unable to send message: User not authenticated');
@@ -182,7 +183,7 @@ const ChatScreen = () => {
     setIsSending(true);
 
     // Optimistic UI: Create temporary message with unique ID
-    // Note: conversationId is guaranteed to be defined by ensureConversation() check above
+    // ID combines timestamp + random string for practical uniqueness in short-lived temp messages
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     const optimisticMessage: Message = {
       id: tempId,
