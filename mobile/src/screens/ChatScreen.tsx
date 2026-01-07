@@ -177,14 +177,30 @@ const ChatScreen = () => {
     setInputText('');
     setIsSending(true);
 
+    // Optimistic UI: Create temporary message
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      conversationId,
+      senderId: user?.id || '',
+      type: 'TEXT',
+      content: messageText,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Add message to local state immediately
+    setMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
+
     try {
       await apiService.sendTextMessage({
         conversationId,
         content: messageText,
       });
-      // Message will be received via socket
+      // Real message will be received via socket and will replace the optimistic one
     } catch (error: any) {
       Alert.alert('Error', 'Failed to send message');
+      // Remove optimistic message on error
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       setInputText(messageText);
     } finally {
       setIsSending(false);
@@ -237,8 +253,10 @@ const ChatScreen = () => {
           isOwnMessage ? styles.ownMessage : styles.otherMessage,
         ]}
       >
-        <Text style={styles.messageText}>{item.content}</Text>
-        <Text style={styles.messageTime}>
+        <Text style={[styles.messageText, isOwnMessage && styles.ownMessageText]}>
+          {item.content}
+        </Text>
+        <Text style={[styles.messageTime, isOwnMessage && styles.ownMessageTime]}>
           {new Date(item.createdAt).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -378,11 +396,17 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: Typography.base * 1.4,
   },
+  ownMessageText: {
+    color: '#FFFFFF',
+  },
   messageTime: {
     fontSize: Typography.xs,
     fontFamily: Typography.fontSans,
     color: Colors.textTertiary,
     marginTop: Spacing.xs,
+  },
+  ownMessageTime: {
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   typingIndicator: {
     paddingHorizontal: Spacing.lg,
