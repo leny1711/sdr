@@ -21,6 +21,7 @@ import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
+const conversationUnavailableMessage = 'This conversation is unavailable.';
 
 const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) => {
   const cached = cache.get(message);
@@ -34,7 +35,9 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
 
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();
-  const { conversationId, matchName } = route.params;
+  const { conversationId: routeConversationId, matchName } = route.params;
+  const conversationId =
+    typeof routeConversationId === 'string' ? routeConversationId.trim() || undefined : undefined;
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -69,10 +72,23 @@ const ChatScreen = () => {
     [messageTimestampCache]
   );
 
+  const ensureConversation = () => {
+    if (!conversationId) {
+      Alert.alert('Error', conversationUnavailableMessage);
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
+    if (!ensureConversation()) {
+      setIsLoading(false);
+      return;
+    }
+
     loadConversation();
     loadMessages();
-    
+
     // Join conversation room
     socketService.joinConversation(conversationId);
 
@@ -103,13 +119,16 @@ const ChatScreen = () => {
     socketService.onUserTyping(handleTyping);
 
     return () => {
-      socketService.leaveConversation(conversationId);
+      if (conversationId) {
+        socketService.leaveConversation(conversationId);
+      }
       socketService.offNewMessage(handleNewMessage);
       socketService.offUserTyping(handleTyping);
     };
   }, [conversationId, user?.id, dedupeMessages]);
 
   const loadConversation = async () => {
+    if (!conversationId) return;
     try {
       const data = await apiService.getConversation(conversationId);
       setConversation(data);
@@ -119,6 +138,7 @@ const ChatScreen = () => {
   };
 
   const loadMessages = async () => {
+    if (!conversationId) return;
     try {
       setIsLoading(true);
       const data = await apiService.getMessages(conversationId);
@@ -138,6 +158,7 @@ const ChatScreen = () => {
   };
 
   const handleSend = async () => {
+    if (!ensureConversation()) return;
     if (!inputText.trim() || isSending) return;
 
     const messageText = inputText.trim();
@@ -160,6 +181,7 @@ const ChatScreen = () => {
 
   const handleInputChange = (text: string) => {
     setInputText(text);
+    if (!ensureConversation()) return;
 
     // Send typing indicator
     if (text.length > 0) {
