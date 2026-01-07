@@ -182,6 +182,7 @@ const ChatScreen = () => {
     setIsSending(true);
 
     // Optimistic UI: Create temporary message with unique ID
+    // Note: conversationId is guaranteed to be defined by ensureConversation() check above
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     const optimisticMessage: Message = {
       id: tempId,
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
     lineHeight: Typography.base * 1.4,
   },
   ownMessageText: {
-    color: '#FFFFFF',
+    color: Colors.textInverse,
   },
   messageTime: {
     fontSize: Typography.xs,
@@ -410,7 +411,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   ownMessageTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: Colors.textInverseSecondary,
   },
   typingIndicator: {
     paddingHorizontal: Spacing.lg,

@@ -7,6 +7,10 @@ export const Colors = {
   textSecondary: '#222222',
   textTertiary: '#666666',
   
+  // Inverse text colors (for dark backgrounds)
+  textInverse: '#FFFFFF',
+  textInverseSecondary: 'rgba(255, 255, 255, 0.7)',
+  
   // Border colors
   borderColor: '#DDDDDD',
   borderLight: '#E8E8E8',
