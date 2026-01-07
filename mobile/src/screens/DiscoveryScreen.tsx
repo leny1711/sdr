@@ -58,6 +58,11 @@ const DiscoveryScreen = () => {
     });
   };
 
+  /**
+   * Handle like action. If it's a match, shows a non-blocking banner notification.
+   * Moves to next profile immediately to allow continuous swiping (modern dating app UX).
+   * The match banner floats above for 3 seconds without interrupting user interaction.
+   */
   const handleLike = async () => {
     if (isActionLoading || currentIndex >= users.length) return;
 
@@ -69,8 +74,6 @@ const DiscoveryScreen = () => {
       if (response.match) {
         showMatchBanner(currentUser.name);
       }
-      // Move to next profile immediately - don't block user interaction
-      // The match banner will float above for 3 seconds without interrupting swiping
       moveToNext();
     } catch (error: any) {
       Alert.alert('Error', 'Failed to like user');
