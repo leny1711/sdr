@@ -25,7 +25,6 @@ const getMatchKey = (match: Match): string => {
   const fallbackParts = [
     match.createdAt,
     match.conversation?.createdAt,
-    match.user?.email,
     match.user?.name,
   ]
     .filter(Boolean)
@@ -96,7 +95,7 @@ const MatchesScreen = () => {
     const conversationId = match.conversation?.id || match.conversationId;
     const matchedUser = match.user || match.matchedUser;
     if (!conversationId || !matchedUser) {
-      Alert.alert('Error', 'Match is missing required information.');
+      Alert.alert('Error', 'Unable to open chat: conversation or user data not available.');
       return;
     }
     navigation.navigate('Chat', {
