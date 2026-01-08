@@ -22,10 +22,12 @@ type NavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList>
 >;
 
+const getConversationId = (match: Match) => match.conversation?.id ?? match.conversationId;
+
 const getMatchKey = (match: Match, index?: number): string => {
   if (match.matchedId) return String(match.matchedId);
-  if (match.conversation?.id) return String(match.conversation.id);
-  if (match.conversationId) return String(match.conversationId); // TODO: remove when legacy responses are dropped
+  const conversationId = getConversationId(match);
+  if (conversationId) return String(conversationId);
   if (match.user?.id) {
     const timestamp = match.createdAt || match.conversation?.createdAt || 'no-date';
     return `user-${match.user.id}-${timestamp}`;
@@ -64,7 +66,7 @@ const MatchesScreen = () => {
   }, []);
 
   const handleMatchPress = (match: Match) => {
-    const conversationId = match.conversation?.id || match.conversationId; // legacy fallback
+    const conversationId = getConversationId(match);
     const matchedUser = match.user || match.matchedUser;
     if (!conversationId || !matchedUser) {
       Alert.alert('Error', 'This conversation is unavailable because match details are incomplete.');
