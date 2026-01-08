@@ -22,7 +22,7 @@ type NavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList>
 >;
 
-const getMatchKey = (match: Match): string => {
+const getMatchKey = (match: Match, index?: number): string => {
   if (match.matchedId) return String(match.matchedId);
   if (match.conversation?.id) return String(match.conversation.id);
   if (match.conversationId) return String(match.conversationId); // TODO: remove when legacy responses are dropped
@@ -31,7 +31,8 @@ const getMatchKey = (match: Match): string => {
     return `user-${match.user.id}-${timestamp}`;
   }
   if (match.createdAt) return `match-${match.createdAt}`;
-  return `unknown-match-${Math.random().toString(36).slice(2)}`;
+  if (index !== undefined) return `match-index-${index}`;
+  return 'unknown-match';
 };
 
 const MatchesScreen = () => {
@@ -63,7 +64,7 @@ const MatchesScreen = () => {
   }, []);
 
   const handleMatchPress = (match: Match) => {
-    const conversationId = match.conversation?.id || match.conversationId;
+    const conversationId = match.conversation?.id || match.conversationId; // legacy fallback
     const matchedUser = match.user || match.matchedUser;
     if (!conversationId || !matchedUser) {
       Alert.alert('Error', 'This conversation is unavailable because match details are incomplete.');
@@ -127,7 +128,7 @@ const MatchesScreen = () => {
       <FlatList
         data={matches}
         renderItem={renderMatch}
-        keyExtractor={(item) => getMatchKey(item)}
+        keyExtractor={(item, index) => getMatchKey(item, index)}
         contentContainerStyle={styles.listContent}
       />
     </Screen>
