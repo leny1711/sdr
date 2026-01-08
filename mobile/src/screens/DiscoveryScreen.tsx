@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,22 +7,14 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import apiService from '../services/api';
 import { DiscoverableUser } from '../types';
 import { Colors, Typography, Spacing } from '../constants/theme';
+import Screen from '../components/Screen';
+import MatchFeedback from '../components/MatchFeedback';
 
-// Animation timing constants
-const BANNER_FADE_DURATION = 300; // milliseconds
-const BANNER_DISPLAY_DURATION = 3000; // milliseconds
 const MAX_DISPLAY_NAME_LENGTH = 50; // characters
-
-interface MatchBannerState {
-  show: boolean;
-  name: string;
-}
 
 /**
  * Sanitize user name for safe display.
@@ -39,9 +31,8 @@ const DiscoveryScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [matchBanner, setMatchBanner] = useState<MatchBannerState>({ show: false, name: '' });
-  const [bannerOpacity] = useState(new Animated.Value(0));
-  const bannerAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [matchName, setMatchName] = useState('');
+  const [showMatchFeedback, setShowMatchFeedback] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -61,34 +52,9 @@ const DiscoveryScreen = () => {
   };
 
   const showMatchBanner = (name: string) => {
-    // Stop any ongoing animation to prevent overlap
-    // This is the recommended React Native pattern - stop() immediately halts animation
-    if (bannerAnimationRef.current) {
-      bannerAnimationRef.current.stop();
-    }
-
     const safeName = sanitizeName(name);
-    setMatchBanner({ show: true, name: safeName });
-    
-    const animation = Animated.sequence([
-      Animated.timing(bannerOpacity, {
-        toValue: 1,
-        duration: BANNER_FADE_DURATION,
-        useNativeDriver: true,
-      }),
-      Animated.delay(BANNER_DISPLAY_DURATION),
-      Animated.timing(bannerOpacity, {
-        toValue: 0,
-        duration: BANNER_FADE_DURATION,
-        useNativeDriver: true,
-      }),
-    ]);
-    
-    bannerAnimationRef.current = animation;
-    animation.start(() => {
-      setMatchBanner({ show: false, name: '' });
-      bannerAnimationRef.current = null;
-    });
+    setMatchName(safeName);
+    setShowMatchFeedback(true);
   };
 
   /**
@@ -141,18 +107,18 @@ const DiscoveryScreen = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Screen>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.textPrimary} />
           <Text style={styles.loadingText}>Loading profiles...</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   if (users.length === 0 || currentIndex >= users.length) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Screen>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No More Profiles</Text>
           <Text style={styles.emptyText}>
@@ -162,22 +128,24 @@ const DiscoveryScreen = () => {
             <Text style={styles.refreshButtonText}>Refresh</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   const currentUser = users[currentIndex];
 
+  const handleHideMatchFeedback = () => {
+    setShowMatchFeedback(false);
+    setMatchName('');
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      {matchBanner.show && (
-        <Animated.View style={[styles.matchBanner, { opacity: bannerOpacity }]}>
-          <Text style={styles.matchBannerTitle}>🎉 It's a Match! 🎉</Text>
-          <Text style={styles.matchBannerText}>
-            You and {matchBanner.name} matched! Start chatting to reveal their photo.
-          </Text>
-        </Animated.View>
-      )}
+    <Screen>
+      <MatchFeedback
+        visible={showMatchFeedback}
+        name={matchName}
+        onHide={handleHideMatchFeedback}
+      />
       
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discovery</Text>
@@ -216,44 +184,11 @@ const DiscoveryScreen = () => {
           <Text style={[styles.actionButtonText, styles.likeButtonText]}>Like</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgPrimary,
-  },
-  matchBanner: {
-    position: 'absolute',
-    top: Spacing.lg, // Inside SafeAreaView, so safe area already accounted for
-    left: Spacing.lg,
-    right: Spacing.lg,
-    backgroundColor: Colors.buttonPrimary,
-    padding: Spacing.lg,
-    borderRadius: 12,
-    zIndex: 1000,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  matchBannerTitle: {
-    fontSize: Typography.xl,
-    fontFamily: Typography.fontSerif,
-    color: Colors.bgPrimary,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  matchBannerText: {
-    fontSize: Typography.base,
-    fontFamily: Typography.fontSans,
-    color: Colors.bgPrimary,
-    textAlign: 'center',
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
