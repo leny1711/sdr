@@ -23,6 +23,8 @@ type NavigationProp = CompositeNavigationProp<
 >;
 
 const getConversationId = (match: Match) => match.conversation?.id ?? match.conversationId;
+const unknownMatchKeyCache = new WeakMap<Match, string>();
+let unknownKeyCounter = 0;
 
 const getMatchKey = (match: Match): string => {
   if (match.matchedId) return String(match.matchedId);
@@ -33,14 +35,18 @@ const getMatchKey = (match: Match): string => {
     return `user-${match.user.id}-${timestamp}`;
   }
   if (match.createdAt) return `match-${match.createdAt}`;
-  return 'unknown-match';
+  const cached = unknownMatchKeyCache.get(match);
+  if (cached) return cached;
+  const generated = `unknown-match-${unknownKeyCounter++}`;
+  unknownMatchKeyCache.set(match, generated);
+  return generated;
 };
 
 const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation<NavigationProp>();
-  const keyExtractor = useCallback((item: Match) => getMatchKey(item), [getMatchKey]);
+  const keyExtractor = useCallback((item: Match) => getMatchKey(item), []);
 
   const loadMatches = async () => {
     try {
