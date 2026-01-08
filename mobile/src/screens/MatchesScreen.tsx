@@ -26,9 +26,8 @@ const getMatchKey = (match: Match): string => {
   const key =
     match.matchedId ||
     match.conversation?.id ||
-    match.conversationId ||
-    match.user?.id ||
-    match.createdAt;
+    match.conversationId || // legacy fallback
+    match.user?.id;
   return key ? String(key) : 'unknown-match';
 };
 
