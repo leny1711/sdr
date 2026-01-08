@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -41,6 +41,7 @@ const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation<NavigationProp>();
+  const keyExtractor = useCallback((item: Match, index: number) => getMatchKey(item, index), []);
 
   const loadMatches = async () => {
     try {
@@ -130,7 +131,7 @@ const MatchesScreen = () => {
       <FlatList
         data={matches}
         renderItem={renderMatch}
-        keyExtractor={(item, index) => getMatchKey(item, index)}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
       />
     </Screen>
