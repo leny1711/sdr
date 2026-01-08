@@ -25,9 +25,10 @@ type NavigationProp = CompositeNavigationProp<
 const getConversationId = (match: Match) => match.conversation?.id ?? match.conversationId;
 
 const getMatchKey = (match: Match): string => {
-  if (match.matchedId) return String(match.matchedId);
+  if (!match) return 'unknown-match';
+  if (match.matchedId) return `${match.matchedId}`;
   const conversationId = getConversationId(match);
-  if (conversationId) return String(conversationId);
+  if (conversationId) return `${conversationId}`;
   if (match.user?.id) {
     const timestamp = match.createdAt || match.conversation?.createdAt || 'no-date';
     return `user-${match.user.id}-${timestamp}`;
