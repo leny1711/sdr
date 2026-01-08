@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   closeText: {
-    color: Colors.bgPrimary,
+    color: Colors.textInverse,
     fontSize: Typography.lg,
     fontFamily: Typography.fontSans,
   },

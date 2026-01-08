@@ -14,18 +14,6 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import { useMatchFeedback } from '../contexts/MatchFeedbackContext';
 
-const MAX_DISPLAY_NAME_LENGTH = 50; // characters
-
-/**
- * Sanitize user name for safe display.
- * React Native Text components render plain text only - they don't execute JS or interpret HTML.
- * XSS is not possible in React Native Text. We sanitize for UI/layout purposes only.
- */
-const sanitizeName = (name: string): string => {
-  // Trim whitespace and limit length to prevent UI overflow
-  return name.trim().slice(0, MAX_DISPLAY_NAME_LENGTH);
-};
-
 const DiscoveryScreen = () => {
   const [users, setUsers] = useState<DiscoverableUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -51,8 +39,7 @@ const DiscoveryScreen = () => {
   };
 
   const showMatchBanner = (name: string) => {
-    const safeName = sanitizeName(name);
-    showMatch(safeName);
+    showMatch(name);
   };
 
   /**

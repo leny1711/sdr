@@ -14,7 +14,8 @@ type MatchFeedbackState = {
 
 const MatchFeedbackContext = createContext<MatchFeedbackContextValue | undefined>(undefined);
 
-const sanitizeName = (name: string) => name.trim();
+const MAX_NAME_LENGTH = 50;
+const sanitizeName = (name: string) => name.trim().slice(0, MAX_NAME_LENGTH);
 
 export const MatchFeedbackProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<MatchFeedbackState>({
