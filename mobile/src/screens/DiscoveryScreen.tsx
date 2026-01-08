@@ -12,27 +12,14 @@ import apiService from '../services/api';
 import { DiscoverableUser } from '../types';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
-import MatchFeedback from '../components/MatchFeedback';
-
-const MAX_DISPLAY_NAME_LENGTH = 50; // characters
-
-/**
- * Sanitize user name for safe display.
- * React Native Text components render plain text only - they don't execute JS or interpret HTML.
- * XSS is not possible in React Native Text. We sanitize for UI/layout purposes only.
- */
-const sanitizeName = (name: string): string => {
-  // Trim whitespace and limit length to prevent UI overflow
-  return name.trim().slice(0, MAX_DISPLAY_NAME_LENGTH);
-};
+import { useMatchFeedback } from '../contexts/MatchFeedbackContext';
 
 const DiscoveryScreen = () => {
   const [users, setUsers] = useState<DiscoverableUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [matchName, setMatchName] = useState('');
-  const [showMatchFeedback, setShowMatchFeedback] = useState(false);
+  const { showMatch } = useMatchFeedback();
 
   useEffect(() => {
     loadUsers();
@@ -52,9 +39,7 @@ const DiscoveryScreen = () => {
   };
 
   const showMatchBanner = (name: string) => {
-    const safeName = sanitizeName(name);
-    setMatchName(safeName);
-    setShowMatchFeedback(true);
+    showMatch(name);
   };
 
   /**
@@ -134,19 +119,8 @@ const DiscoveryScreen = () => {
 
   const currentUser = users[currentIndex];
 
-  const handleHideMatchFeedback = () => {
-    setShowMatchFeedback(false);
-    setMatchName('');
-  };
-
   return (
     <Screen>
-      <MatchFeedback
-        visible={showMatchFeedback}
-        name={matchName}
-        onHide={handleHideMatchFeedback}
-      />
-      
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discovery</Text>
         <Text style={styles.counter}>

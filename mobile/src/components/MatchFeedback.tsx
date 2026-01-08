@@ -1,17 +1,18 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing } from '../constants/theme';
 
 const FADE_DURATION = 300;
-const DISPLAY_DURATION = 3000;
+const DISPLAY_DURATION = 4000;
 
 type MatchFeedbackProps = {
   visible: boolean;
   name: string;
   onHide: () => void;
+  trigger?: number;
 };
 
-const MatchFeedback = ({ visible, name, onHide }: MatchFeedbackProps) => {
+const MatchFeedback = ({ visible, name, onHide, trigger }: MatchFeedbackProps) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -37,17 +38,29 @@ const MatchFeedback = ({ visible, name, onHide }: MatchFeedbackProps) => {
     ]);
 
     animationRef.current = animation;
-    animation.start(onHide);
+    animation.start(({ finished }) => {
+      if (finished) {
+        onHide();
+      }
+    });
 
     return () => {
       animation.stop();
     };
-  }, [visible, name, onHide, opacity]);
+  }, [visible, name, onHide, opacity, trigger]);
 
   if (!visible) return null;
 
   return (
     <Animated.View style={[styles.banner, { opacity }]} pointerEvents="box-none">
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={onHide}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss match notification"
+      >
+        <Text style={styles.closeText}>×</Text>
+      </TouchableOpacity>
       <Text style={styles.title}>🎉 It's a Match! 🎉</Text>
       <Text style={styles.text}>
         You and {name} matched! Start chatting to reveal their photo.
@@ -71,6 +84,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Spacing.xs,
+    right: Spacing.xs,
+    padding: Spacing.xs,
+  },
+  closeText: {
+    color: Colors.textInverse,
+    fontSize: Typography.lg,
+    fontFamily: Typography.fontSans,
   },
   title: {
     fontSize: Typography.xl,

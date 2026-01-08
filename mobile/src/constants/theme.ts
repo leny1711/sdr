@@ -1,7 +1,7 @@
 // Kindle-inspired design system for mobile
 export const Colors = {
   // Primary colors
-  bgPrimary: '#F5F4EF',
+  bgPrimary: '#FFEEEE',
   bgSecondary: '#EFEEEA',
   textPrimary: '#111111',
   textSecondary: '#222222',
