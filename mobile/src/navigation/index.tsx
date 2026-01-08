@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,6 +39,18 @@ export type AppStackParamList = {
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
+
+const AppNavigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: Colors.bgPrimary,
+    card: Colors.bgSecondary,
+    border: Colors.borderLight,
+    primary: Colors.buttonPrimary,
+    text: Colors.textPrimary,
+  },
+};
 
 // Auth Navigator - Login and Register screens
 const AuthNavigator = () => {
@@ -140,7 +152,7 @@ export const Navigation = () => {
   const isAuthenticated = !!(user && token);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={AppNavigationTheme}>
       {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

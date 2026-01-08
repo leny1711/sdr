@@ -8,13 +8,13 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import apiService from '../services/api';
 import { Match } from '../types';
 import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
+import Screen from '../components/Screen';
 
 type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
 
@@ -140,18 +140,18 @@ const MatchesScreen = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Screen>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.textPrimary} />
           <Text style={styles.loadingText}>Loading matches...</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   if (matches.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Screen>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Matches</Text>
         </View>
@@ -161,12 +161,12 @@ const MatchesScreen = () => {
             Start discovering profiles to find your matches.
           </Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Matches</Text>
         <Text style={styles.matchCount}>{matches.length}</Text>
@@ -177,15 +177,11 @@ const MatchesScreen = () => {
         keyExtractor={(item) => getMatchKey(item)}
         contentContainerStyle={styles.listContent}
       />
-    </SafeAreaView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgPrimary,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

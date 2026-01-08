@@ -11,7 +11,6 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import apiService from '../services/api';
 import socketService from '../services/socket';
@@ -19,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Message, Conversation } from '../types';
 import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
+import Screen from '../components/Screen';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 const conversationUnavailableMessage = 'This conversation is unavailable.';
@@ -274,17 +274,17 @@ const ChatScreen = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Screen edges={['bottom']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.textPrimary} />
           <Text style={styles.loadingText}>Loading messages...</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <Screen edges={['bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -339,15 +339,11 @@ const ChatScreen = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgPrimary,
-  },
   keyboardView: {
     flex: 1,
   },

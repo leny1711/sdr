@@ -9,10 +9,10 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import { Colors, Typography, Spacing } from '../constants/theme';
+import Screen from '../components/Screen';
 
 const ProfileScreen = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -87,16 +87,16 @@ const ProfileScreen = () => {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Screen>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.textPrimary} />
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
         {!isEditing && (
@@ -199,15 +199,11 @@ const ProfileScreen = () => {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgPrimary,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
