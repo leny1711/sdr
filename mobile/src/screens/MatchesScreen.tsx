@@ -23,8 +23,6 @@ type NavigationProp = CompositeNavigationProp<
 >;
 
 const getConversationId = (match: Match) => match.conversation?.id ?? match.conversationId;
-const unknownMatchKeyCache = new WeakMap<Match, string>();
-let unknownKeyCounter = 0;
 
 const getMatchKey = (match: Match): string => {
   if (match.matchedId) return String(match.matchedId);
@@ -35,11 +33,12 @@ const getMatchKey = (match: Match): string => {
     return `user-${match.user.id}-${timestamp}`;
   }
   if (match.createdAt) return `match-${match.createdAt}`;
-  const cached = unknownMatchKeyCache.get(match);
-  if (cached) return cached;
-  const generated = `unknown-match-${unknownKeyCounter++}`;
-  unknownMatchKeyCache.set(match, generated);
-  return generated;
+  const descriptor =
+    match.conversation?.createdAt ||
+    match.user?.name ||
+    match.user?.email ||
+    'unknown';
+  return `unknown-match-${descriptor}`;
 };
 
 const MatchesScreen = () => {
