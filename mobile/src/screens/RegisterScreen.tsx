@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -15,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
+import AnimatedTextInput from '../components/AnimatedTextInput';
 
 type RegisterScreenProps = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
@@ -82,7 +82,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
 
             <View style={styles.form}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
+              <AnimatedTextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
@@ -94,7 +94,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               />
 
               <Text style={styles.label}>Password</Text>
-              <TextInput
+              <AnimatedTextInput
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
@@ -105,7 +105,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               />
 
               <Text style={styles.label}>Name</Text>
-              <TextInput
+              <AnimatedTextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
@@ -115,7 +115,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               />
 
               <Text style={styles.label}>Age</Text>
-              <TextInput
+              <AnimatedTextInput
                 style={styles.input}
                 value={age}
                 onChangeText={setAge}
@@ -125,7 +125,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               />
 
               <Text style={styles.label}>Gender</Text>
-              <TextInput
+              <AnimatedTextInput
                 style={styles.input}
                 value={gender}
                 onChangeText={setGender}
@@ -134,7 +134,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               />
 
               <Text style={styles.label}>City</Text>
-              <TextInput
+              <AnimatedTextInput
                 style={styles.input}
                 value={city}
                 onChangeText={setCity}
@@ -143,7 +143,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               />
 
               <Text style={styles.label}>Description (min 100 characters)</Text>
-              <TextInput
+              <AnimatedTextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}

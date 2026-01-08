@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
+import AnimatedTextInput from '../components/AnimatedTextInput';
 
 const ProfileScreen = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -113,7 +113,7 @@ const ProfileScreen = () => {
 
           <Text style={styles.label}>Name</Text>
           {isEditing ? (
-            <TextInput
+            <AnimatedTextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
@@ -126,7 +126,7 @@ const ProfileScreen = () => {
 
           <Text style={styles.label}>Age</Text>
           {isEditing ? (
-            <TextInput
+            <AnimatedTextInput
               style={styles.input}
               value={age}
               onChangeText={setAge}
@@ -140,7 +140,7 @@ const ProfileScreen = () => {
 
           <Text style={styles.label}>City</Text>
           {isEditing ? (
-            <TextInput
+            <AnimatedTextInput
               style={styles.input}
               value={city}
               onChangeText={setCity}
@@ -154,7 +154,7 @@ const ProfileScreen = () => {
           <Text style={styles.label}>Description</Text>
           {isEditing ? (
             <>
-              <TextInput
+              <AnimatedTextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}

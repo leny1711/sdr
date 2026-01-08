@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,20 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import apiService from '../services/api';
 import { Match } from '../types';
-import { AppStackParamList } from '../navigation';
+import { AppStackParamList, TabParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
+import { getConversationReadCounts, ReadCounts } from '../services/unreadStorage';
 
-type NavigationProp = NativeStackNavigationProp<AppStackParamList>;
+type NavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<AppStackParamList>,
+  BottomTabNavigationProp<TabParamList>
+>;
 
 const getMatchKey = (match: Match): string => {
   if (match.matchedId) return match.matchedId;
@@ -57,11 +62,23 @@ const dedupeMatches = (items: Match[]) => {
 const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [readCounts, setReadCounts] = useState<ReadCounts>({});
   const navigation = useNavigation<NavigationProp>();
+  const parentNavigator = useMemo(() => navigation.getParent(), [navigation]);
+
+  const refreshReadCounts = useCallback(async () => {
+    try {
+      const stored = await getConversationReadCounts();
+      setReadCounts(stored);
+    } catch (error) {
+      console.error('Failed to refresh read counts', error);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       loadMatches();
+      refreshReadCounts();
     }, [])
   );
 
@@ -83,6 +100,34 @@ const MatchesScreen = () => {
       setIsLoading(false);
     }
   };
+
+  const getUnreadCount = useCallback(
+    (match: Match) => {
+      const conversationId = match.conversation?.id;
+      const total = match.conversation?.textMessageCount ?? 0;
+      if (!conversationId || total <= 0) return 0;
+      const read = readCounts[conversationId] ?? 0;
+      return Math.max(0, total - read);
+    },
+    [readCounts]
+  );
+
+  const unreadTotal = useMemo(
+    () => matches.reduce((sum, match) => sum + getUnreadCount(match), 0),
+    [matches, getUnreadCount]
+  );
+
+  const lastBadgeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!parentNavigator) return;
+    if (lastBadgeRef.current === unreadTotal) return;
+    parentNavigator.setOptions({
+      tabBarBadge: unreadTotal > 0 ? unreadTotal : undefined,
+      tabBarBadgeStyle: unreadTotal > 0 ? styles.tabBadge : undefined,
+    });
+    lastBadgeRef.current = unreadTotal;
+  }, [parentNavigator, unreadTotal]);
 
   const getRevealLevelText = (level: number): string => {
     switch (level) {
@@ -120,16 +165,28 @@ const MatchesScreen = () => {
       : 'Details unavailable';
     const revealLevel = item.conversation?.revealLevel ?? 0;
     const messageCount = item.conversation?.textMessageCount ?? 0;
+    const unreadCount = getUnreadCount(item);
+    const messageCountStyle =
+      unreadCount > 0
+        ? [styles.messageCount, styles.messageCountUnread]
+        : styles.messageCount;
     return (
       <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
         <View style={styles.matchInfo}>
-          <Text style={styles.matchName}>{displayName}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.matchName}>{displayName}</Text>
+            {unreadCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.matchDetails}>{displayDetails}</Text>
           <View style={styles.revealInfo}>
             <Text style={styles.revealText}>
               Photo: {getRevealLevelText(revealLevel)}
             </Text>
-            <Text style={styles.messageCount}>
+            <Text style={messageCountStyle}>
               {messageCount} messages
             </Text>
           </View>
@@ -215,11 +272,31 @@ const styles = StyleSheet.create({
   matchInfo: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   matchName: {
     fontSize: Typography.xl,
     fontFamily: Typography.fontSerif,
     color: Colors.textPrimary,
     marginBottom: Spacing.xs,
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: 11,
+    backgroundColor: Colors.buttonPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadBadgeText: {
+    color: Colors.bgPrimary,
+    fontSize: Typography.xs,
+    fontFamily: Typography.fontSans,
+    fontWeight: '700',
   },
   matchDetails: {
     fontSize: Typography.base,
@@ -241,6 +318,10 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     fontFamily: Typography.fontSans,
     color: Colors.textTertiary,
+  },
+  messageCountUnread: {
+    color: Colors.textPrimary,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -272,6 +353,11 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: Typography.base * Typography.lineHeightBody,
+  },
+  tabBadge: {
+    backgroundColor: Colors.buttonPrimary,
+    color: Colors.bgPrimary,
+    fontSize: Typography.sm,
   },
 });
 
