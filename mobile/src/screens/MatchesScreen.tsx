@@ -23,12 +23,11 @@ type NavigationProp = CompositeNavigationProp<
 >;
 
 const getMatchKey = (match: Match): string => {
-  const key =
-    match.matchedId ||
-    match.conversation?.id ||
-    match.conversationId || // legacy fallback
-    match.user?.id;
-  return key ? String(key) : 'unknown-match';
+  if (match.matchedId) return String(match.matchedId);
+  if (match.conversation?.id) return String(match.conversation.id);
+  if (match.conversationId) return String(match.conversationId); // TODO: remove when legacy responses are dropped
+  if (match.user?.id && match.createdAt) return `user-${match.user.id}-${match.createdAt}`;
+  return 'unknown-match';
 };
 
 const MatchesScreen = () => {
