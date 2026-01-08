@@ -12,7 +12,7 @@ import apiService from '../services/api';
 import { DiscoverableUser } from '../types';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
-import MatchFeedback from '../components/MatchFeedback';
+import { useMatchFeedback } from '../contexts/MatchFeedbackContext';
 
 const MAX_DISPLAY_NAME_LENGTH = 50; // characters
 
@@ -31,8 +31,7 @@ const DiscoveryScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [matchName, setMatchName] = useState('');
-  const [showMatchFeedback, setShowMatchFeedback] = useState(false);
+  const { showMatch } = useMatchFeedback();
 
   useEffect(() => {
     loadUsers();
@@ -53,8 +52,7 @@ const DiscoveryScreen = () => {
 
   const showMatchBanner = (name: string) => {
     const safeName = sanitizeName(name);
-    setMatchName(safeName);
-    setShowMatchFeedback(true);
+    showMatch(safeName);
   };
 
   /**
@@ -134,19 +132,8 @@ const DiscoveryScreen = () => {
 
   const currentUser = users[currentIndex];
 
-  const handleHideMatchFeedback = () => {
-    setShowMatchFeedback(false);
-    setMatchName('');
-  };
-
   return (
     <Screen>
-      <MatchFeedback
-        visible={showMatchFeedback}
-        name={matchName}
-        onHide={handleHideMatchFeedback}
-      />
-      
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discovery</Text>
         <Text style={styles.counter}>
