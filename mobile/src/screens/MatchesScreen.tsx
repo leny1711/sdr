@@ -23,13 +23,13 @@ type NavigationProp = CompositeNavigationProp<
 >;
 
 const getMatchKey = (match: Match): string => {
-  return (
+  const key =
     match.matchedId ||
     match.conversation?.id ||
     match.conversationId ||
     match.user?.id ||
-    match.createdAt
-  );
+    match.createdAt;
+  return key ? String(key) : 'unknown-match';
 };
 
 const MatchesScreen = () => {
