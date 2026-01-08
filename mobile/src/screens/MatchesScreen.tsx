@@ -26,8 +26,12 @@ const getMatchKey = (match: Match): string => {
   if (match.matchedId) return String(match.matchedId);
   if (match.conversation?.id) return String(match.conversation.id);
   if (match.conversationId) return String(match.conversationId); // TODO: remove when legacy responses are dropped
-  if (match.user?.id && match.createdAt) return `user-${match.user.id}-${match.createdAt}`;
-  return 'unknown-match';
+  if (match.user?.id) {
+    const timestamp = match.createdAt || match.conversation?.createdAt || 'no-date';
+    return `user-${match.user.id}-${timestamp}`;
+  }
+  if (match.createdAt) return `match-${match.createdAt}`;
+  return `unknown-match-${Math.random().toString(36).slice(2)}`;
 };
 
 const MatchesScreen = () => {
