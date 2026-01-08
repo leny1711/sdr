@@ -24,7 +24,7 @@ type NavigationProp = CompositeNavigationProp<
 
 const getConversationId = (match: Match) => match.conversation?.id ?? match.conversationId;
 
-const getMatchKey = (match: Match, index?: number): string => {
+const getMatchKey = (match: Match): string => {
   if (match.matchedId) return String(match.matchedId);
   const conversationId = getConversationId(match);
   if (conversationId) return String(conversationId);
@@ -33,7 +33,6 @@ const getMatchKey = (match: Match, index?: number): string => {
     return `user-${match.user.id}-${timestamp}`;
   }
   if (match.createdAt) return `match-${match.createdAt}`;
-  if (index !== undefined) return `match-index-${index}`;
   return 'unknown-match';
 };
 
@@ -41,7 +40,7 @@ const MatchesScreen = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation<NavigationProp>();
-  const keyExtractor = useCallback((item: Match, index: number) => getMatchKey(item, index), []);
+  const keyExtractor = useCallback((item: Match) => getMatchKey(item), [getMatchKey]);
 
   const loadMatches = async () => {
     try {
