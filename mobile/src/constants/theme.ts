@@ -1,19 +1,20 @@
 // Kindle-inspired design system for mobile
 export const Colors = {
   // Primary colors
-  bgPrimary: '#FFEEEE',
-  bgSecondary: '#EFEEEA',
-  textPrimary: '#111111',
-  textSecondary: '#222222',
-  textTertiary: '#666666',
+  bgPrimary: '#f3f0ea',
+  bgSecondary: '#fafafa',
+  surfaceHighlight: '#ffffff',
+  textPrimary: '#1f1f1f',
+  textSecondary: '#2f2a25',
+  textTertiary: '#9a958c',
   
   // Inverse text colors (for dark backgrounds)
   textInverse: '#FFFFFF',
   textInverseSecondary: 'rgba(255, 255, 255, 0.7)',
   
   // Border colors
-  borderColor: '#DDDDDD',
-  borderLight: '#E8E8E8',
+  borderColor: '#e1ddd6',
+  borderLight: '#e1ddd6',
   
   // Button colors
   buttonPrimary: '#333333',

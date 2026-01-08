@@ -3,15 +3,15 @@ import {
   View,
   Text,
   FlatList,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { RouteProp, useIsFocused, useRoute } from '@react-navigation/native';
 import apiService from '../services/api';
 import socketService from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +19,8 @@ import { Message, Conversation } from '../types';
 import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
+import AnimatedTextInput from '../components/AnimatedTextInput';
+import { markConversationAsRead } from '../services/unreadStorage';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 const conversationUnavailableMessage = 'This conversation is unavailable.';
@@ -38,6 +40,7 @@ const ChatScreen = () => {
   const { conversationId: routeConversationId, matchName } = route.params;
   const conversationId =
     typeof routeConversationId === 'string' ? routeConversationId.trim() || undefined : undefined;
+  const isFocused = useIsFocused();
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -50,6 +53,8 @@ const ChatScreen = () => {
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messageTimestampCache = useRef(new WeakMap<Message, number>()).current;
+  const sendFeedbackAnim = useRef(new Animated.Value(0)).current;
+  const lastPersistedCount = useRef<number | null>(null);
 
   const dedupeMessages = useCallback(
     (items: Message[]) => {
@@ -77,6 +82,22 @@ const ChatScreen = () => {
     [messageTimestampCache]
   );
 
+  const triggerSendFeedback = () => {
+    sendFeedbackAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(sendFeedbackAnim, {
+        toValue: 1,
+        duration: 140,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sendFeedbackAnim, {
+        toValue: 0,
+        duration: 140,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const ensureConversation = () => {
     if (!conversationId) {
       Alert.alert('Error', conversationUnavailableMessage);
@@ -86,7 +107,7 @@ const ChatScreen = () => {
   };
 
   useEffect(() => {
-    if (!ensureConversation()) {
+    if (!ensureConversation() || !conversationId) {
       setIsLoading(false);
       return;
     }
@@ -170,8 +191,7 @@ const ChatScreen = () => {
   };
 
   const handleSend = async () => {
-    if (!ensureConversation()) return;
-    if (!conversationId) return; // Type guard for TypeScript
+    if (!ensureConversation() || !conversationId) return;
     if (!inputText.trim() || isSending) return;
     if (!user?.id) {
       Alert.alert('Error', 'Unable to send message: User not authenticated');
@@ -181,6 +201,7 @@ const ChatScreen = () => {
     const messageText = inputText.trim();
     setInputText('');
     setIsSending(true);
+    triggerSendFeedback();
 
     // Optimistic UI: Create temporary message with unique ID
     // ID combines timestamp + random string for practical uniqueness in short-lived temp messages
@@ -215,7 +236,7 @@ const ChatScreen = () => {
 
   const handleInputChange = (text: string) => {
     setInputText(text);
-    if (!ensureConversation()) return;
+    if (!ensureConversation() || !conversationId) return;
 
     // Send typing indicator
     if (text.length > 0) {
@@ -235,6 +256,19 @@ const ChatScreen = () => {
     }
   };
 
+  useEffect(() => {
+    if (!conversation?.id || !isFocused) return;
+    if (lastPersistedCount.current === conversation.textMessageCount) return;
+    const timeout = setTimeout(() => {
+      lastPersistedCount.current = conversation.textMessageCount;
+      markConversationAsRead(conversation.id, conversation.textMessageCount).catch((error) =>
+        console.error('Failed to persist read state', error)
+      );
+    }, 800);
+
+    return () => clearTimeout(timeout);
+  }, [conversation?.id, conversation?.textMessageCount, isFocused]);
+
   const getRevealLevelText = (level: number): string => {
     switch (level) {
       case 0:
@@ -249,6 +283,11 @@ const ChatScreen = () => {
         return 'Unknown';
     }
   };
+
+  const sendButtonScale = sendFeedbackAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.96],
+  });
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwnMessage = item.senderId === user?.id;
@@ -321,7 +360,7 @@ const ChatScreen = () => {
         )}
 
         <View style={styles.inputContainer}>
-          <TextInput
+          <AnimatedTextInput
             style={styles.input}
             value={inputText}
             onChangeText={handleInputChange}
@@ -330,13 +369,15 @@ const ChatScreen = () => {
             multiline
             maxLength={1000}
           />
-          <TouchableOpacity
-            style={[styles.sendButton, (!inputText.trim() || isSending) && styles.sendButtonDisabled]}
-            onPress={handleSend}
-            disabled={!inputText.trim() || isSending}
-          >
-            <Text style={styles.sendButtonText}>Send</Text>
-          </TouchableOpacity>
+          <Animated.View style={{ transform: [{ scale: sendButtonScale }] }}>
+            <TouchableOpacity
+              style={[styles.sendButton, (!inputText.trim() || isSending) && styles.sendButtonDisabled]}
+              onPress={handleSend}
+              disabled={!inputText.trim() || isSending}
+            >
+              <Text style={styles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </Screen>
