@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/theme';
+import { User } from '../types';
 
 // Auth Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -15,6 +16,7 @@ import DiscoveryScreen from '../screens/DiscoveryScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import ChatScreen from '../screens/ChatScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import MatchProfileScreen from '../screens/MatchProfileScreen';
 
 // Navigation Types
 export type AuthStackParamList = {
@@ -34,6 +36,10 @@ export type AppStackParamList = {
     conversationId: string;
     matchName: string;
     matchPhotoUrl?: string;
+  };
+  MatchProfile: {
+    user: User;
+    revealLevel: number;
   };
 };
 
@@ -139,6 +145,18 @@ const AppNavigator = () => {
           },
           headerTintColor: Colors.textPrimary,
           headerTitle: '',
+        }}
+      />
+      <AppStack.Screen
+        name="MatchProfile"
+        component={MatchProfileScreen}
+        options={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: Colors.bgPrimary,
+          },
+          headerTintColor: Colors.textPrimary,
+          title: 'Profil du match',
         }}
       />
     </AppStack.Navigator>

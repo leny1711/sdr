@@ -24,13 +24,16 @@ export const getRevealChapter = (level: number): string => {
 };
 
 export const getPhotoEffects = (level: number) => {
-  if (level <= 0) {
-    return { blurRadius: 24, grayscale: true, overlayOpacity: 0.45 };
+  const clampedLevel = Math.max(0, Math.min(4, Math.round(level)));
+  const grayscale = clampedLevel < 3;
+
+  if (clampedLevel === 0) {
+    return { blurRadius: 24, grayscale, overlayOpacity: 0.45 };
   }
 
-  if (level === 1) return { blurRadius: 18, grayscale: true, overlayOpacity: 0.35 };
-  if (level === 2) return { blurRadius: 10, grayscale: true, overlayOpacity: 0.22 };
-  if (level === 3) return { blurRadius: 4, grayscale: false, overlayOpacity: 0.12 };
+  if (clampedLevel === 1) return { blurRadius: 18, grayscale, overlayOpacity: 0.35 };
+  if (clampedLevel === 2) return { blurRadius: 10, grayscale, overlayOpacity: 0.22 };
+  if (clampedLevel === 3) return { blurRadius: 4, grayscale: false, overlayOpacity: 0.12 };
 
   return { blurRadius: 0, grayscale: false, overlayOpacity: 0 };
 };

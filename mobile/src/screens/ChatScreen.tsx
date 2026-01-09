@@ -10,10 +10,9 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
-  Image,
-  ImageStyle,
 } from 'react-native';
-import { RouteProp, useIsFocused, useRoute } from '@react-navigation/native';
+import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import apiService from '../services/api';
 import socketService from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,7 +22,8 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import { markConversationAsRead } from '../services/unreadStorage';
-import { calculateRevealLevel, getPhotoEffects, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
+import RevealPhoto from '../components/RevealPhoto';
+import { calculateRevealLevel, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 const conversationUnavailableMessage = 'Cette conversation est indisponible.';
@@ -44,6 +44,7 @@ const ChatScreen = () => {
   const conversationId =
     typeof routeConversationId === 'string' ? routeConversationId.trim() || undefined : undefined;
   const isFocused = useIsFocused();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -116,6 +117,18 @@ const ChatScreen = () => {
       return false;
     }
     return true;
+  };
+
+  const handleOpenProfile = () => {
+    if (!conversation?.otherUser) {
+      Alert.alert('Profil indisponible', 'Le profil du match n’est pas encore chargé.');
+      return;
+    }
+
+    navigation.navigate('MatchProfile', {
+      user: conversation.otherUser,
+      revealLevel: conversation.revealLevel ?? 0,
+    });
   };
 
   useEffect(() => {
@@ -374,6 +387,8 @@ const ChatScreen = () => {
 
   const displayName = conversation?.otherUser?.name || matchName;
   const displayInitial = displayName?.[0]?.toUpperCase() || '?';
+  const revealLevel = conversation?.revealLevel ?? 0;
+  const candidatePhoto = conversation?.otherUser?.photoUrl || matchPhotoUrl || null;
 
   if (isLoading) {
     return (
@@ -394,38 +409,23 @@ const ChatScreen = () => {
         keyboardVerticalOffset={90}
       >
         <View style={styles.header}>
-          <View style={styles.headerTop}>
-            {(() => {
-              const revealLevel = conversation?.revealLevel ?? 0;
-              const candidatePhoto = conversation?.otherUser?.photoUrl || matchPhotoUrl || null;
-              const photoHidden = shouldHidePhoto(revealLevel, conversation?.otherUser?.photoHidden, candidatePhoto);
-              const photoUri = !photoHidden ? candidatePhoto : undefined;
-              const effects = getPhotoEffects(revealLevel);
-
-              return photoUri ? (
-                <View style={styles.photoWrapper}>
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={[styles.headerAvatar, effects.grayscale && styles.grayscaleImage]}
-                    blurRadius={effects.blurRadius}
-                  />
-                  {(effects.overlayOpacity > 0 || effects.grayscale) && (
-                    <View
-                      pointerEvents="none"
-                      style={[
-                        styles.photoOverlay,
-                        effects.grayscale && styles.photoOverlayMuted,
-                        { opacity: effects.overlayOpacity },
-                      ]}
-                    />
-                  )}
-                </View>
-              ) : (
-                <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+          <TouchableOpacity
+            style={styles.headerTop}
+            activeOpacity={0.85}
+            onPress={handleOpenProfile}
+          >
+            <RevealPhoto
+              photoUrl={candidatePhoto || undefined}
+              photoHidden={conversation?.otherUser?.photoHidden}
+              revealLevel={revealLevel}
+              containerStyle={styles.photoWrapper}
+              borderRadius={24}
+              placeholder={
+                <View style={styles.headerAvatarPlaceholder}>
                   <Text style={styles.headerAvatarText}>{displayInitial}</Text>
                 </View>
-              );
-            })()}
+              }
+            />
             <View style={styles.headerTextArea}>
               <Text style={styles.matchName}>{displayName}</Text>
               {conversation && (
@@ -445,11 +445,11 @@ const ChatScreen = () => {
                     },
                   ]}
                 >
-                  <Text style={styles.chapterBadgeText}>{unlockedChapter}</Text>
-                </Animated.View>
-              )}
-            </View>
-          </View>
+                    <Text style={styles.chapterBadgeText}>{unlockedChapter}</Text>
+                  </Animated.View>
+                )}
+              </View>
+          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -508,33 +508,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-  headerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
   photoWrapper: {
     width: 48,
     height: 48,
     borderRadius: 24,
     overflow: 'hidden',
     position: 'relative',
-  },
-  grayscaleImage: {
-    ...(Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as unknown as ImageStyle) : {}),
-  },
-  photoOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.bgPrimary,
-    borderRadius: 24,
-  },
-  photoOverlayMuted: {
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerAvatarPlaceholder: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },

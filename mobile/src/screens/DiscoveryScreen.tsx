@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiService from '../services/api';
@@ -131,13 +130,6 @@ const DiscoveryScreen = () => {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
-          {currentUser.photoUrl ? (
-            <Image source={{ uri: currentUser.photoUrl }} style={styles.photo} />
-          ) : (
-            <View style={[styles.photo, styles.photoPlaceholder]}>
-              <Text style={styles.photoPlaceholderText}>Photo cachée jusqu’à un match</Text>
-            </View>
-          )}
           <Text style={styles.name}>{currentUser.name}</Text>
           <Text style={styles.info}>
             {currentUser.age} • {currentUser.city}
@@ -202,23 +194,6 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.borderLight,
-  },
-  photo: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.bgPrimary,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  photoPlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  photoPlaceholderText: {
-    color: Colors.textTertiary,
-    fontFamily: Typography.fontSans,
   },
   name: {
     fontSize: Typography.xxl,
