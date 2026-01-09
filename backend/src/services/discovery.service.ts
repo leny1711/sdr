@@ -39,7 +39,7 @@ const deriveInterestedInFromLegacy = (matchPreference?: string | null): (typeof 
   const lowered = (matchPreference || '').toLowerCase();
   if (lowered === 'hommes' || lowered === 'homme' || lowered === 'male') return ['male'];
   if (lowered === 'femmes' || lowered === 'femme' || lowered === 'female') return ['female'];
-  if (lowered === 'les deux' || lowered === 'both') return [...GENDER_OPTIONS];
+  if (lowered === 'les deux' || lowered === 'both') return Array.from(GENDER_OPTIONS);
   return [];
 };
 

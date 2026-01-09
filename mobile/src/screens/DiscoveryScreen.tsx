@@ -130,19 +130,17 @@ const DiscoveryScreen = () => {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.card}>
-            {currentUser.photoUrl ? (
-              <Image source={{ uri: currentUser.photoUrl }} style={styles.photo} />
-            ) : (
-              <View style={[styles.photo, styles.photoPlaceholder]}>
-                <Text style={styles.photoPlaceholderText}>
-                  Photo cachée jusqu’à un match
-                </Text>
-              </View>
-            )}
-            <Text style={styles.name}>{currentUser.name}</Text>
-            <Text style={styles.info}>
-              {currentUser.age} • {currentUser.city}
+        <View style={styles.card}>
+          {currentUser.photoUrl ? (
+            <Image source={{ uri: currentUser.photoUrl }} style={styles.photo} />
+          ) : (
+            <View style={[styles.photo, styles.photoPlaceholder]}>
+              <Text style={styles.photoPlaceholderText}>Photo cachée jusqu’à un match</Text>
+            </View>
+          )}
+          <Text style={styles.name}>{currentUser.name}</Text>
+          <Text style={styles.info}>
+            {currentUser.age} • {currentUser.city}
           </Text>
 
           <View style={styles.divider} />
