@@ -28,12 +28,12 @@ export const getPhotoEffects = (level: number) => {
   const grayscale = clampedLevel <= 1;
 
   if (clampedLevel === 0) {
-    return { blurRadius: 22, grayscale, overlayOpacity: 0.28, coverRatio: 0.4 };
+    return { blurRadius: 24, grayscale, overlayOpacity: 0.32, coverRatio: 0.3 };
   }
 
-  if (clampedLevel === 1) return { blurRadius: 16, grayscale, overlayOpacity: 0.18, coverRatio: 0.25 };
-  if (clampedLevel === 2) return { blurRadius: 9, grayscale: false, overlayOpacity: 0.12, coverRatio: 0.12 };
-  if (clampedLevel === 3) return { blurRadius: 4, grayscale: false, overlayOpacity: 0.06, coverRatio: 0 };
+  if (clampedLevel === 1) return { blurRadius: 18, grayscale, overlayOpacity: 0.22, coverRatio: 0.18 };
+  if (clampedLevel === 2) return { blurRadius: 12, grayscale: false, overlayOpacity: 0.14, coverRatio: 0.08 };
+  if (clampedLevel === 3) return { blurRadius: 7, grayscale: false, overlayOpacity: 0.08, coverRatio: 0 };
 
   return { blurRadius: 0, grayscale: false, overlayOpacity: 0, coverRatio: 0 };
 };
@@ -57,6 +57,5 @@ export const getChapterNarrative = (level: number): string => {
 export const shouldHidePhoto = (revealLevel: number, photoHidden?: boolean, photoUrl?: string | null) => {
   if (!photoUrl) return true;
   if (revealLevel < 0) return true;
-  if (photoHidden && revealLevel <= 0) return true;
   return false;
 };
