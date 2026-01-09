@@ -14,6 +14,7 @@ import apiService from '../services/api';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
+import { getGenderLabel, INTEREST_OPTIONS } from '../constants/user';
 
 const ProfileScreen = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -95,6 +96,14 @@ const ProfileScreen = () => {
       </Screen>
     );
   }
+
+  const renderInterests = (values?: string[]) => {
+    if (!values || values.length === 0) return 'Non renseigné';
+    const labels = values
+      .map((value) => INTEREST_OPTIONS.find((option) => option.value === value)?.label || value)
+      .filter(Boolean);
+    return labels.length ? labels.join(', ') : 'Non renseigné';
+  };
 
   return (
     <Screen>
@@ -181,10 +190,10 @@ const ProfileScreen = () => {
           )}
 
           <Text style={styles.label}>Genre</Text>
-          <Text style={styles.value}>{user.gender || 'Non renseigné'}</Text>
+          <Text style={styles.value}>{getGenderLabel(user.gender)}</Text>
 
           <Text style={styles.label}>Préférences</Text>
-          <Text style={styles.value}>{user.matchPreference || 'Non renseigné'}</Text>
+          <Text style={styles.value}>{renderInterests(user.interestedIn)}</Text>
 
           {isEditing && (
             <View style={styles.actions}>

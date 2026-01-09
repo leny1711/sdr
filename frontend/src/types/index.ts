@@ -5,9 +5,10 @@ export interface User {
   name: string;
   age: number;
   gender: string;
+  interestedIn: string[];
   city: string;
   description: string;
-  photoUrl?: string;
+  photoUrl?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -18,8 +19,10 @@ export interface RegisterData {
   name: string;
   age: number;
   gender: string;
+  interestedIn: string[];
   city: string;
   description: string;
+  photoUrl?: string;
 }
 
 export interface LoginData {

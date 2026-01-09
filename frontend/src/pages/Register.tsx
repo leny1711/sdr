@@ -10,6 +10,7 @@ const Register: React.FC = () => {
     name: '',
     age: '',
     gender: 'male',
+    interestedIn: [] as string[],
     city: '',
     description: '',
   });
@@ -22,12 +23,27 @@ const Register: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const toggleInterest = (value: string) => {
+    setFormData((prev) => {
+      const hasValue = prev.interestedIn.includes(value);
+      const nextInterests = hasValue
+        ? prev.interestedIn.filter((item) => item !== value)
+        : [...prev.interestedIn, value];
+      return { ...prev, interestedIn: nextInterests };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (formData.description.length < 100) {
       setError('Description must be at least 100 characters long.');
+      return;
+    }
+
+    if (formData.interestedIn.length === 0) {
+      setError('Select at least one interest.');
       return;
     }
 
@@ -114,20 +130,36 @@ const Register: React.FC = () => {
               />
             </div>
 
-            <div className={styles.formGroup}>
-              <label htmlFor="gender">Gender</label>
-              <select
-                id="gender"
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                required
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+          <div className={styles.formGroup}>
+            <label htmlFor="gender">Gender</label>
+            <select
+              id="gender"
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              required
+            >
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Interested in</label>
+            <div className={styles.checkboxGroup}>
+              {['male', 'female', 'other'].map((value) => (
+                <label key={value} className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={formData.interestedIn.includes(value)}
+                    onChange={() => toggleInterest(value)}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>{value}</span>
+                </label>
+              ))}
             </div>
+          </div>
           </div>
 
           <div className={styles.formGroup}>

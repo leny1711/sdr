@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
-import { GENDER_OPTIONS, MATCH_PREFERENCE_OPTIONS } from '../constants/user';
+import { GENDER_OPTIONS, INTEREST_OPTIONS } from '../constants/user';
 
 type RegisterScreenProps = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
@@ -31,8 +31,8 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [age, setAge] = useState('');
-  const [gender, setGender] = useState<(typeof GENDER_OPTIONS)[number] | ''>('');
-  const [matchPreference, setMatchPreference] = useState<(typeof MATCH_PREFERENCE_OPTIONS)[number] | ''>('');
+  const [gender, setGender] = useState<(typeof GENDER_OPTIONS)[number]['value'] | ''>('');
+  const [interestedIn, setInterestedIn] = useState<(typeof INTEREST_OPTIONS)[number]['value'][]>([]);
   const [city, setCity] = useState('');
   const [description, setDescription] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
@@ -97,7 +97,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       !lastName ||
       !age ||
       !gender ||
-      !matchPreference ||
+      interestedIn.length === 0 ||
       !city ||
       !description
     ) {
@@ -121,15 +121,17 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       return;
     }
 
-    if (!GENDER_OPTIONS.includes(gender as (typeof GENDER_OPTIONS)[number])) {
+    const isGenderValid = GENDER_OPTIONS.some((option) => option.value === gender);
+    if (!isGenderValid) {
       Alert.alert('Genre invalide', 'Sélectionnez une option dans la liste.');
       return;
     }
 
-    if (
-      !MATCH_PREFERENCE_OPTIONS.includes(matchPreference as (typeof MATCH_PREFERENCE_OPTIONS)[number])
-    ) {
-      Alert.alert('Préférence invalide', 'Sélectionnez une option dans la liste.');
+    const validInterests = interestedIn.filter((value) =>
+      INTEREST_OPTIONS.some((option) => option.value === value)
+    );
+    if (validInterests.length === 0) {
+      Alert.alert('Préférences invalides', 'Sélectionnez au moins une préférence.');
       return;
     }
 
@@ -142,7 +144,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
         lastName: lastName.trim(),
         age: ageNum,
         gender: gender.trim(),
-        matchPreference,
+        interestedIn: validInterests,
         city: city.trim(),
         description: description.trim(),
         photoUrl,
@@ -226,12 +228,12 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               <View style={styles.optionRow}>
                 {GENDER_OPTIONS.map((option) => (
                   <TouchableOpacity
-                    key={option}
-                    style={[styles.optionPill, gender === option && styles.optionPillSelected]}
-                    onPress={() => setGender(option)}
+                    key={option.value}
+                    style={[styles.optionPill, gender === option.value && styles.optionPillSelected]}
+                    onPress={() => setGender(option.value)}
                   >
-                    <Text style={[styles.optionText, gender === option && styles.optionTextSelected]}>
-                      {option}
+                    <Text style={[styles.optionText, gender === option.value && styles.optionTextSelected]}>
+                      {option.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -239,25 +241,26 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
 
               <Text style={styles.label}>Préférences de rencontre</Text>
               <View style={styles.optionRow}>
-                {MATCH_PREFERENCE_OPTIONS.map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.optionPill,
-                      matchPreference === option && styles.optionPillSelected,
-                    ]}
-                    onPress={() => setMatchPreference(option)}
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        matchPreference === option && styles.optionTextSelected,
-                      ]}
+                {INTEREST_OPTIONS.map((option) => {
+                  const isSelected = interestedIn.includes(option.value);
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[styles.optionPill, isSelected && styles.optionPillSelected]}
+                      onPress={() =>
+                        setInterestedIn((prev) =>
+                          prev.includes(option.value)
+                            ? prev.filter((value) => value !== option.value)
+                            : [...prev, option.value]
+                        )
+                      }
                     >
-                      {option}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               <Text style={styles.label}>Ville</Text>

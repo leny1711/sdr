@@ -6,10 +6,10 @@ export interface User {
   lastName?: string;
   age: number;
   gender: string;
-  matchPreference: string;
+  interestedIn: string[];
   city: string;
   description: string;
-  photoUrl: string;
+  photoUrl?: string | null;
   createdAt: string;
 }
 
@@ -64,14 +64,23 @@ export interface RegisterRequest {
   lastName: string;
   age: number;
   gender: string;
-  matchPreference: string;
+  interestedIn: string[];
   city: string;
   description: string;
   photoUrl: string;
 }
 
-export interface DiscoverableUser extends User {
-  // Additional fields if needed for discovery
+export interface DiscoverableUser {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  interestedIn: string[];
+  city: string;
+  description: string;
+  photoUrl?: string | null;
+  createdAt: string;
+  photoHidden?: boolean;
 }
 
 export interface LikeRequest {
