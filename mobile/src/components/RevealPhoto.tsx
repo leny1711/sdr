@@ -24,12 +24,16 @@ type RevealPhotoProps = {
 const GRAYSCALE_TINT = '#c8c8c8';
 const MUTED_OVERLAY_COLOR = 'rgba(0,0,0,0.25)';
 const COVER_OPACITY = 0.32;
+const HIDDEN_PHOTO_OVERLAY_BOOST = 0.1;
 const PERCENTAGE_MAX = 100;
+
+const calculateOverlayBoost = (photoHidden: boolean, revealLevel: number) =>
+  photoHidden && revealLevel <= 1 ? HIDDEN_PHOTO_OVERLAY_BOOST : 0;
 
 const RevealPhoto = ({
   photoUrl,
   revealLevel,
-  photoHidden,
+  photoHidden: _photoHidden = false,
   containerStyle,
   imageStyle,
   borderRadius,
@@ -40,7 +44,7 @@ const RevealPhoto = ({
     setLoadError(false);
   }, [photoUrl]);
 
-  const hidden = shouldHidePhoto(revealLevel, photoHidden, photoUrl) || loadError;
+  const hidden = shouldHidePhoto(revealLevel, photoUrl) || loadError;
   const radiusStyle = borderRadius !== undefined ? { borderRadius } : undefined;
 
   if (hidden || !photoUrl) {
@@ -52,6 +56,8 @@ const RevealPhoto = ({
   }
 
   const effects = getPhotoEffects(revealLevel);
+  const boostedOverlayOpacity = effects.overlayOpacity + calculateOverlayBoost(_photoHidden, revealLevel);
+  const overlayOpacity = Math.min(1, boostedOverlayOpacity);
   const coverHeight = (effects.coverRatio ?? 0) * PERCENTAGE_MAX;
 
   return (
@@ -83,14 +89,14 @@ const RevealPhoto = ({
           ]}
         />
       )}
-      {(effects.overlayOpacity > 0 || effects.grayscale) && (
+      {(overlayOpacity > 0 || effects.grayscale) && (
         <View
           pointerEvents="none"
           style={[
             styles.overlay,
             radiusStyle,
             effects.grayscale && styles.overlayMuted,
-            { opacity: effects.overlayOpacity },
+            { opacity: overlayOpacity },
           ]}
         />
       )}
