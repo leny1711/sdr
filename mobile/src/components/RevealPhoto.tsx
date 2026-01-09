@@ -24,6 +24,7 @@ type RevealPhotoProps = {
 const GRAYSCALE_TINT = '#c8c8c8';
 const MUTED_OVERLAY_COLOR = 'rgba(0,0,0,0.25)';
 const COVER_OPACITY = 0.32;
+const HIDDEN_PHOTO_OVERLAY_BOOST = 0.1;
 const PERCENTAGE_MAX = 100;
 
 const RevealPhoto = ({
@@ -52,7 +53,8 @@ const RevealPhoto = ({
   }
 
   const effects = getPhotoEffects(revealLevel);
-  const boostedOverlayOpacity = effects.overlayOpacity + (_photoHidden && revealLevel <= 1 ? 0.1 : 0);
+  const boostedOverlayOpacity =
+    effects.overlayOpacity + (_photoHidden && revealLevel <= 1 ? HIDDEN_PHOTO_OVERLAY_BOOST : 0);
   const overlayOpacity = Math.min(1, boostedOverlayOpacity);
   const coverHeight = (effects.coverRatio ?? 0) * PERCENTAGE_MAX;
 
