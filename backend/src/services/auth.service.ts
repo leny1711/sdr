@@ -4,6 +4,7 @@ import { config } from '../config/env';
 import prisma from '../config/database';
 import { JWTPayload } from '../types';
 import { GENDER_OPTIONS, MATCH_PREFERENCE_OPTIONS } from '../constants/user.constants';
+import { buildFullName, splitFullName } from '../utils/name.utils';
 
 export class AuthService {
   private static SALT_ROUNDS = 10;
@@ -62,7 +63,7 @@ export class AuthService {
     const hashedPassword = await this.hashPassword(data.password);
 
     const { firstName, lastName, name, ...rest } = data;
-    const fullName = name ?? `${firstName ?? ''} ${lastName ?? ''}`.trim();
+    const fullName = buildFullName(firstName, lastName, name);
     if (!fullName) {
       throw new Error('Le nom complet est requis');
     }
@@ -94,8 +95,7 @@ export class AuthService {
     return {
       user: {
         ...user,
-        firstName: firstName ?? fullName.split(' ')[0] ?? '',
-        lastName: lastName ?? fullName.split(' ').slice(1).join(' '),
+        ...splitFullName(fullName),
       },
       token,
     };
@@ -124,8 +124,7 @@ export class AuthService {
 
     const { password: _, ...userWithoutPassword } = user;
 
-    const [firstName = '', ...lastParts] = (userWithoutPassword.name ?? '').trim().split(' ');
-    const lastName = lastParts.join(' ');
+    const { firstName, lastName } = splitFullName(userWithoutPassword.name);
 
     return {
       user: {

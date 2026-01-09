@@ -62,7 +62,6 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
-  name?: string;
   age: number;
   gender: string;
   matchPreference: string;

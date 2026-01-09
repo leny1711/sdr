@@ -1,4 +1,5 @@
 import prisma from '../config/database';
+import { splitFullName, buildFullName } from '../utils/name.utils';
 
 export class UserService {
   static async getUserById(userId: string) {
@@ -23,8 +24,7 @@ export class UserService {
       throw new Error('Utilisateur introuvable');
     }
 
-    const [firstName = '', ...lastParts] = (user.name ?? '').trim().split(' ');
-    const lastName = lastParts.join(' ');
+    const { firstName, lastName } = splitFullName(user.name);
 
     return {
       ...user,
@@ -48,7 +48,7 @@ export class UserService {
     const payload = { ...rest };
 
     if (!payload.name && (firstName || lastName)) {
-      payload.name = `${firstName ?? ''} ${lastName ?? ''}`.trim();
+      payload.name = buildFullName(firstName, lastName);
     }
 
     const user = await prisma.user.update({
@@ -69,8 +69,7 @@ export class UserService {
       },
     });
 
-    const [firstName = '', ...lastParts] = (user.name ?? '').trim().split(' ');
-    const lastName = lastParts.join(' ');
+    const { firstName, lastName } = splitFullName(user.name);
 
     return {
       ...user,
