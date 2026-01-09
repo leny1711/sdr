@@ -54,10 +54,10 @@ export const getChapterNarrative = (level: number): string => {
   }
 };
 
-export const shouldHidePhoto = (revealLevel: number, photoHidden?: boolean, photoUrl?: string | null) => {
+export const shouldHidePhoto = (revealLevel: number, photoUrl?: string | null) => {
   if (!photoUrl) return true;
   if (revealLevel < 0) return true;
-  // Even if `photoHidden` is true, we keep rendering the photo with strong visual
-  // obfuscation for early chapters to avoid empty or grey placeholders.
+  // We keep rendering the photo with strong visual obfuscation for early chapters
+  // to avoid empty or grey placeholders.
   return false;
 };

@@ -29,7 +29,7 @@ const PERCENTAGE_MAX = 100;
 const RevealPhoto = ({
   photoUrl,
   revealLevel,
-  photoHidden,
+  photoHidden: _photoHidden,
   containerStyle,
   imageStyle,
   borderRadius,
@@ -40,7 +40,7 @@ const RevealPhoto = ({
     setLoadError(false);
   }, [photoUrl]);
 
-  const hidden = shouldHidePhoto(revealLevel, photoHidden, photoUrl) || loadError;
+  const hidden = shouldHidePhoto(revealLevel, photoUrl) || loadError;
   const radiusStyle = borderRadius !== undefined ? { borderRadius } : undefined;
 
   if (hidden || !photoUrl) {
