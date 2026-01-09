@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
 import styles from './Profile.module.css';
+
+const MAX_IMAGE_SIZE_BYTES = 3_000_000; // ~3MB
 
 const Profile: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
@@ -13,9 +15,11 @@ const Profile: React.FC = () => {
     city: user?.city || '',
     description: user?.description || '',
   });
+  const [photoUrl, setPhotoUrl] = useState<string | null>(user?.photoUrl ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.name === 'age' ? parseInt(e.target.value) : e.target.value;
@@ -32,7 +36,10 @@ const Profile: React.FC = () => {
 
     setLoading(true);
     try {
-      const updatedUser = await userAPI.updateProfile(formData);
+      const updatedUser = await userAPI.updateProfile({
+        ...formData,
+        photoUrl: photoUrl ?? null,
+      });
       updateUser(updatedUser);
       setIsEditing(false);
     } catch (err) {
@@ -49,8 +56,34 @@ const Profile: React.FC = () => {
       city: user?.city || '',
       description: user?.description || '',
     });
+    setPhotoUrl(user?.photoUrl ?? null);
     setIsEditing(false);
     setError('');
+  };
+
+  const handlePhotoSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setError('Photo trop lourde. Merci de choisir une image de moins de ~3 Mo.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result?.toString() || '';
+      setPhotoUrl(result || null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeletePhoto = () => {
+    setPhotoUrl(null);
   };
 
   const handleLogout = () => {
@@ -81,6 +114,13 @@ const Profile: React.FC = () => {
       <div className={styles.profileContent}>
         {!isEditing ? (
           <>
+            <div className={styles.photoSection}>
+              {photoUrl ? (
+                <img src={photoUrl} alt="Profil" className={styles.photo} />
+              ) : (
+                <div className={styles.photoPlaceholder}>Photo cachée</div>
+              )}
+            </div>
             <div className={styles.section}>
               <h2>{user.name}, {user.age}</h2>
               <p className={styles.meta}>{user.city} • {user.gender}</p>
@@ -100,6 +140,33 @@ const Profile: React.FC = () => {
           </>
         ) : (
           <>
+            <div className={styles.photoSection}>
+              {photoUrl ? (
+                <img src={photoUrl} alt="Profil" className={styles.photo} />
+              ) : (
+                <div className={styles.photoPlaceholder}>Photo cachée</div>
+              )}
+              <div className={styles.photoActions}>
+                <button type="button" onClick={handlePhotoSelect} className={styles.photoButton} disabled={loading}>
+                  Remplacer la photo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeletePhoto}
+                  className={`${styles.photoButton} ${styles.deleteButton}`}
+                  disabled={loading}
+                >
+                  Supprimer
+                </button>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className={styles.fileInput}
+                onChange={handleFileChange}
+              />
+            </div>
             <div className={styles.formGroup}>
               <label htmlFor="name">Name</label>
               <input

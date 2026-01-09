@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  ImageStyle,
 } from 'react-native';
 import { RouteProp, useIsFocused, useRoute } from '@react-navigation/native';
 import apiService from '../services/api';
@@ -22,6 +23,7 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import { markConversationAsRead } from '../services/unreadStorage';
+import { calculateRevealLevel, getPhotoEffects, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 const conversationUnavailableMessage = 'Cette conversation est indisponible.';
@@ -55,7 +57,16 @@ const ChatScreen = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messageTimestampCache = useRef(new WeakMap<Message, number>()).current;
   const sendFeedbackAnim = useRef(new Animated.Value(0)).current;
+  const chapterFeedbackAnim = useRef(new Animated.Value(0)).current;
   const lastPersistedCount = useRef<number | null>(null);
+  const lastRevealLevelRef = useRef<number | null>(null);
+  const photoRefreshRef = useRef(false);
+  const photoUnavailableRef = useRef(false);
+  const [unlockedChapter, setUnlockedChapter] = useState<string | null>(null);
+
+  useEffect(() => {
+    photoUnavailableRef.current = false;
+  }, [conversationId]);
 
   const dedupeMessages = useCallback(
     (items: Message[]) => {
@@ -120,16 +131,31 @@ const ChatScreen = () => {
     socketService.joinConversation(conversationId);
 
     // Listen for new messages
-    const handleNewMessage = (message: Message) => {
-      setMessages((prev) => dedupeMessages([...prev, message]));
+    const handleNewMessage = (payload: Message | { message: Message; revealLevel?: number }) => {
+      const incomingMessage = (payload as any).message ? (payload as any).message : (payload as Message);
+      const incomingRevealLevel = (payload as any).revealLevel as number | undefined;
+
+      setMessages((prev) => dedupeMessages([...prev, incomingMessage]));
       // Update conversation message count
-      if (message.type === 'TEXT') {
+      if (incomingMessage.type === 'TEXT') {
         setConversation((prev) => {
           if (!prev) return prev;
+          const updatedCount = prev.textMessageCount + 1;
+          const newRevealLevel =
+            typeof incomingRevealLevel === 'number'
+              ? incomingRevealLevel
+              : calculateRevealLevel(updatedCount);
+          const candidatePhoto = prev.otherUser?.photoUrl || matchPhotoUrl || null;
           return {
             ...prev,
-            textMessageCount: prev.textMessageCount + 1,
-            revealLevel: calculateRevealLevel(prev.textMessageCount + 1),
+            textMessageCount: updatedCount,
+            revealLevel: newRevealLevel,
+            otherUser: prev.otherUser
+              ? {
+                  ...prev.otherUser,
+                  photoHidden: shouldHidePhoto(newRevealLevel, prev.otherUser.photoHidden, candidatePhoto),
+                }
+              : prev.otherUser,
           };
         });
       }
@@ -182,13 +208,6 @@ const ChatScreen = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const calculateRevealLevel = (count: number): number => {
-    if (count < 10) return 0;
-    if (count < 20) return 1;
-    if (count < 30) return 2;
-    return 3;
   };
 
   const handleSend = async () => {
@@ -270,25 +289,66 @@ const ChatScreen = () => {
     return () => clearTimeout(timeout);
   }, [conversation?.id, conversation?.textMessageCount, isFocused]);
 
-  const getRevealLevelText = (level: number): string => {
-    switch (level) {
-      case 0:
-        return 'Très floutée, N&B';
-      case 1:
-        return 'Légèrement visible, N&B';
-      case 2:
-        return 'Plutôt visible, N&B';
-      case 3:
-        return 'Totalement visible, couleur';
-      default:
-        return 'Inconnu';
-    }
-  };
-
   const sendButtonScale = sendFeedbackAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 0.96],
   });
+
+  const chapterFeedbackScale = chapterFeedbackAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.98, 1],
+  });
+
+  useEffect(() => {
+    if (!conversation) return;
+    const previousLevel = lastRevealLevelRef.current;
+    const currentLevel = conversation.revealLevel ?? 0;
+    if (conversation.otherUser?.photoUrl) {
+      photoUnavailableRef.current = false;
+    }
+    if (previousLevel !== null && currentLevel > previousLevel) {
+      setUnlockedChapter(getRevealChapter(currentLevel));
+      chapterFeedbackAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(chapterFeedbackAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.delay(900),
+        Animated.timing(chapterFeedbackAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setUnlockedChapter(null));
+    }
+    lastRevealLevelRef.current = currentLevel;
+  }, [conversation]);
+
+  useEffect(() => {
+    if (!conversation?.id) return;
+    if (
+      conversation.revealLevel > 0 &&
+      !conversation.otherUser?.photoUrl &&
+      !photoRefreshRef.current &&
+      !photoUnavailableRef.current
+    ) {
+      photoRefreshRef.current = true;
+      apiService
+        .getConversation(conversation.id)
+        .then((data) => {
+          setConversation(data);
+          if (!data?.otherUser?.photoUrl) {
+            photoUnavailableRef.current = true;
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          photoRefreshRef.current = false;
+        });
+    }
+  }, [conversation?.id, conversation?.otherUser?.photoHidden, conversation?.otherUser?.photoUrl, conversation?.revealLevel]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwnMessage = item.senderId === user?.id;
@@ -312,6 +372,9 @@ const ChatScreen = () => {
     );
   };
 
+  const displayName = conversation?.otherUser?.name || matchName;
+  const displayInitial = displayName?.[0]?.toUpperCase() || '?';
+
   if (isLoading) {
     return (
       <Screen edges={['bottom']}>
@@ -332,24 +395,58 @@ const ChatScreen = () => {
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            {matchPhotoUrl ? (
-              <Image source={{ uri: matchPhotoUrl }} style={styles.headerAvatar} />
-            ) : (
-              <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
-                <Text style={styles.headerAvatarText}>{matchName?.[0]?.toUpperCase() || '?'}</Text>
-              </View>
-            )}
+            {(() => {
+              const revealLevel = conversation?.revealLevel ?? 0;
+              const candidatePhoto = conversation?.otherUser?.photoUrl || matchPhotoUrl || null;
+              const photoHidden = shouldHidePhoto(revealLevel, conversation?.otherUser?.photoHidden, candidatePhoto);
+              const photoUri = !photoHidden ? candidatePhoto : undefined;
+              const effects = getPhotoEffects(revealLevel);
+
+              return photoUri ? (
+                <View style={styles.photoWrapper}>
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={[styles.headerAvatar, effects.grayscale && styles.grayscaleImage]}
+                    blurRadius={effects.blurRadius}
+                  />
+                  {(effects.overlayOpacity > 0 || effects.grayscale) && (
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.photoOverlay,
+                        effects.grayscale && styles.photoOverlayMuted,
+                        { opacity: effects.overlayOpacity },
+                      ]}
+                    />
+                  )}
+                </View>
+              ) : (
+                <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+                  <Text style={styles.headerAvatarText}>{displayInitial}</Text>
+                </View>
+              );
+            })()}
             <View style={styles.headerTextArea}>
-              <Text style={styles.matchName}>{matchName}</Text>
+              <Text style={styles.matchName}>{displayName}</Text>
               {conversation && (
                 <View style={styles.revealInfo}>
                   <Text style={styles.revealText}>
-                    Photo : {getRevealLevelText(conversation.revealLevel)}
-                  </Text>
-                  <Text style={styles.messageCount}>
-                    {conversation.textMessageCount} messages
+                    {getRevealChapter(conversation.revealLevel)}
                   </Text>
                 </View>
+              )}
+              {unlockedChapter && (
+                <Animated.View
+                  style={[
+                    styles.chapterBadge,
+                    {
+                      opacity: chapterFeedbackAnim,
+                      transform: [{ scale: chapterFeedbackScale }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.chapterBadgeText}>{unlockedChapter}</Text>
+                </Animated.View>
               )}
             </View>
           </View>
@@ -367,7 +464,7 @@ const ChatScreen = () => {
 
         {typingUser && (
           <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>{matchName} écrit...</Text>
+            <Text style={styles.typingText}>{displayName} écrit...</Text>
           </View>
         )}
 
@@ -419,6 +516,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
+  photoWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  grayscaleImage: {
+    ...(Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as unknown as ImageStyle) : {}),
+  },
+  photoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.bgPrimary,
+    borderRadius: 24,
+  },
+  photoOverlayMuted: {
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
   headerAvatarPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -446,6 +561,22 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     fontFamily: Typography.fontSans,
     color: Colors.textTertiary,
+  },
+  chapterBadge: {
+    marginTop: Spacing.xs,
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: 999,
+    backgroundColor: Colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  chapterBadgeText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontSans,
+    color: Colors.textPrimary,
+    fontWeight: '600',
   },
   messageCount: {
     fontSize: Typography.sm,

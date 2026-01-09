@@ -10,6 +10,7 @@ export interface User {
   city: string;
   description: string;
   photoUrl?: string | null;
+  photoHidden?: boolean;
   createdAt: string;
 }
 
@@ -34,6 +35,7 @@ export interface Conversation {
   revealLevel: number;
   textMessageCount: number;
   createdAt: string;
+  otherUser?: User;
 }
 
 export interface Message {

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import { Colors, Typography, Spacing } from '../constants/theme';
@@ -16,15 +17,19 @@ import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import { getGenderLabel, INTEREST_OPTIONS } from '../constants/user';
 
+const MAX_IMAGE_SIZE_BYTES = 3_000_000; // ~3MB
+
 const ProfileScreen = () => {
   const { user, logout, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPickingImage, setIsPickingImage] = useState(false);
 
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
   const [description, setDescription] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -32,8 +37,71 @@ const ProfileScreen = () => {
       setAge(user.age.toString());
       setCity(user.city);
       setDescription(user.description);
+      setPhotoUrl(user.photoUrl || null);
     }
   }, [user]);
+
+  const handlePickImage = async (fromCamera = false) => {
+    setIsPickingImage(true);
+    try {
+      const permission = fromCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (permission.status !== 'granted') {
+        Alert.alert(
+          'Autorisation requise',
+          'Merci d’autoriser l’accès à vos photos pour ajouter une image de profil.'
+        );
+        return;
+      }
+
+      const result = fromCamera
+        ? await ImagePicker.launchCameraAsync({
+            quality: 0.6,
+            base64: true,
+            allowsEditing: true,
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            quality: 0.6,
+            base64: true,
+            allowsEditing: true,
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          });
+
+      if (!result.canceled && result.assets?.length) {
+        const asset = result.assets[0];
+        const mimeType = asset.mimeType || 'image/jpeg';
+        const base64Data = (asset.base64 || '').replace(/=+$/, '');
+        const sizeBytes = base64Data ? Math.ceil((base64Data.length * 3) / 4) : asset.fileSize || 0;
+
+        if (sizeBytes > MAX_IMAGE_SIZE_BYTES) {
+          Alert.alert('Photo trop lourde', 'Merci de choisir une image plus légère (max ~3 Mo).');
+          return;
+        }
+        const dataUrl = base64Data ? `data:${mimeType};base64,${base64Data}` : asset.uri;
+        setPhotoUrl(dataUrl || null);
+      }
+    } finally {
+      setIsPickingImage(false);
+    }
+  };
+
+  const handleDeletePhoto = () => {
+    Alert.alert(
+      'Supprimer la photo ?',
+      'Votre photo sera retirée et vos futurs matchs commenceront avec une photo cachée.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () => setPhotoUrl(null),
+        },
+      ]
+    );
+  };
 
   const handleSave = async () => {
     if (!name || !age || !city || !description) {
@@ -59,6 +127,7 @@ const ProfileScreen = () => {
         age: ageNum,
         city: city.trim(),
         description: description.trim(),
+        photoUrl: photoUrl ?? null,
       });
       await refreshUser();
       setIsEditing(false);
@@ -76,6 +145,7 @@ const ProfileScreen = () => {
       setAge(user.age.toString());
       setCity(user.city);
       setDescription(user.description);
+      setPhotoUrl(user.photoUrl || null);
     }
     setIsEditing(false);
   };
@@ -122,11 +192,36 @@ const ProfileScreen = () => {
           <Text style={styles.value}>{user.email}</Text>
 
           <Text style={styles.label}>Photo de profil</Text>
-          {user.photoUrl ? (
-            <Image source={{ uri: user.photoUrl }} style={styles.photo} />
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.photo} />
           ) : (
             <View style={[styles.photo, styles.photoPlaceholder]}>
-              <Text style={styles.photoPlaceholderText}>Photo manquante</Text>
+              <Text style={styles.photoPlaceholderText}>Photo cachée</Text>
+            </View>
+          )}
+          {isEditing && (
+            <View style={styles.photoActions}>
+              <TouchableOpacity
+                style={[styles.photoButton, isPickingImage && styles.buttonDisabled]}
+                onPress={() => handlePickImage(false)}
+                disabled={isPickingImage}
+              >
+                <Text style={styles.photoButtonText}>Bibliothèque</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.photoButton, isPickingImage && styles.buttonDisabled]}
+                onPress={() => handlePickImage(true)}
+                disabled={isPickingImage}
+              >
+                <Text style={styles.photoButtonText}>Appareil photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.photoButton, styles.deletePhotoButton]}
+                onPress={handleDeletePhoto}
+                disabled={isPickingImage}
+              >
+                <Text style={[styles.photoButtonText, styles.deletePhotoButtonText]}>Supprimer</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -290,6 +385,34 @@ const styles = StyleSheet.create({
   photoPlaceholderText: {
     color: Colors.textTertiary,
     fontFamily: Typography.fontSans,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  photoButton: {
+    flex: 1,
+    backgroundColor: Colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    padding: Spacing.sm,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  photoButtonText: {
+    color: Colors.textPrimary,
+    fontFamily: Typography.fontSans,
+    fontWeight: '600',
+  },
+  deletePhotoButton: {
+    backgroundColor: Colors.error,
+    borderColor: Colors.error,
+  },
+  deletePhotoButtonText: {
+    color: Colors.bgPrimary,
   },
   descriptionValue: {
     fontSize: Typography.base,

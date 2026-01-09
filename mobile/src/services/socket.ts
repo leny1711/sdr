@@ -58,7 +58,7 @@ class SocketService {
   }
 
   // Listen for new messages
-  onNewMessage(callback: (message: Message) => void) {
+  onNewMessage(callback: (payload: { message: Message; revealLevel?: number } | Message) => void) {
     this.socket?.on('message:new', callback);
   }
 

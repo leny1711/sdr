@@ -20,7 +20,8 @@ const Chat: React.FC = () => {
   const navigate = useNavigate();
 
   const calculateRevealLevel = useCallback((count: number): number => {
-    if (count >= 30) return 3;
+    if (count >= 50) return 4;
+    if (count >= 35) return 3;
     if (count >= 20) return 2;
     if (count >= 10) return 1;
     return 0;
@@ -44,15 +45,19 @@ const Chat: React.FC = () => {
   useEffect(() => {
     if (!conversationId) return;
 
-    const handleNewMessage = (message: Message) => {
-      setMessages((prev) => [...prev, message]);
+    const handleNewMessage = (payload: Message | { message: Message; revealLevel?: number }) => {
+      const incomingMessage = (payload as any).message ? (payload as any).message : (payload as Message);
+      const incomingRevealLevel = (payload as any).revealLevel as number | undefined;
+
+      setMessages((prev) => [...prev, incomingMessage]);
       
       // Update text message count if it's a text message
-      if (message.type === 'TEXT') {
+      if (incomingMessage.type === 'TEXT') {
         setConversation((prev) => {
           if (!prev) return prev;
           const newCount = prev.textMessageCount + 1;
-          const newRevealLevel = calculateRevealLevel(newCount);
+          const newRevealLevel =
+            typeof incomingRevealLevel === 'number' ? incomingRevealLevel : calculateRevealLevel(newCount);
           return {
             ...prev,
             textMessageCount: newCount,
@@ -125,13 +130,15 @@ const Chat: React.FC = () => {
   const getRevealLevelText = (level: number): string => {
     switch (level) {
       case 0:
-        return 'Fully blurred, B&W';
+        return 'Chapitre 0 • Photo cachée';
       case 1:
-        return 'Lightly visible, B&W';
+        return 'Chapitre 1 • Silhouette floutée (N&B)';
       case 2:
-        return 'Mostly visible, B&W';
+        return 'Chapitre 2 • Contours (N&B)';
       case 3:
-        return 'Fully visible, Color';
+        return 'Chapitre 3 • Couleur partielle';
+      case 4:
+        return 'Chapitre final • Photo dévoilée';
       default:
         return '';
     }
@@ -163,8 +170,7 @@ const Chat: React.FC = () => {
         <div className={styles.headerInfo}>
           <h2>{conversation.otherUser.name}</h2>
           <p className={styles.revealInfo}>
-            Photo: {getRevealLevelText(conversation.revealLevel)} • 
-            {conversation.textMessageCount} text messages
+            Photo: {getRevealLevelText(conversation.revealLevel)}
           </p>
         </div>
       </div>

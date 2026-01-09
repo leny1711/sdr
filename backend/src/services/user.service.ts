@@ -1,9 +1,10 @@
 import prisma from '../config/database';
 import { GENDER_OPTIONS, INTEREST_OPTIONS } from '../constants/user.constants';
 import { splitFullName, buildFullName } from '../utils/name.utils';
+import { normalizePhotoUrl } from '../utils/reveal.utils';
 
 export class UserService {
-  static async getUserById(userId: string) {
+  static async getUserById(userId: string, viewerId?: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -27,8 +28,12 @@ export class UserService {
 
     const { firstName, lastName } = splitFullName(user.name);
 
+    const safePhoto = viewerId && viewerId !== userId ? null : normalizePhotoUrl(user.photoUrl);
+
     return {
       ...user,
+      photoUrl: safePhoto,
+      photoHidden: !safePhoto,
       firstName,
       lastName,
     };
@@ -69,6 +74,10 @@ export class UserService {
       payload.interestedIn = Array.from(new Set(payload.interestedIn));
     }
 
+    if (payload.photoUrl !== undefined) {
+      payload.photoUrl = payload.photoUrl && payload.photoUrl.trim().length ? payload.photoUrl : '';
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: payload,
@@ -89,8 +98,12 @@ export class UserService {
 
     const { firstName: parsedFirstName, lastName: parsedLastName } = splitFullName(user.name);
 
+    const photoUrl = normalizePhotoUrl(user.photoUrl);
+
     return {
       ...user,
+      photoUrl,
+      photoHidden: !photoUrl,
       firstName: parsedFirstName,
       lastName: parsedLastName,
     };

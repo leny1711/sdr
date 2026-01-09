@@ -1,4 +1,5 @@
 import prisma from '../config/database';
+import { applyRevealToUser, normalizePhotoUrl } from '../utils/reveal.utils';
 
 export class MatchService {
   static async getUserMatches(userId: string) {
@@ -47,9 +48,10 @@ export class MatchService {
 
     const formattedMatches = matches.map((match) => {
       const otherUser = match.user1Id === userId ? match.user2 : match.user1;
+      const revealLevel = match.conversation?.revealLevel ?? 0;
       return {
         matchId: match.id,
-        user: otherUser,
+        user: applyRevealToUser({ ...otherUser, photoUrl: normalizePhotoUrl(otherUser.photoUrl) }, revealLevel),
         conversation: match.conversation,
         createdAt: match.createdAt,
       };

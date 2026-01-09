@@ -12,6 +12,58 @@
   margin: 0 auto;
 }
 
+.photoSection {
+  margin-bottom: var(--spacing-xl);
+}
+
+.photo {
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+}
+
+.photoPlaceholder {
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  border: 1px dashed var(--border-light);
+  background: var(--bg-secondary);
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+}
+
+.photoActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.photoButton {
+  flex: 1;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  padding: var(--spacing-sm);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.deleteButton {
+  background: #c93b3b;
+  border-color: #c93b3b;
+  color: #fff;
+}
+
+.fileInput {
+  display: none;
+}
+
 .section {
   margin-bottom: var(--spacing-xl);
 }
