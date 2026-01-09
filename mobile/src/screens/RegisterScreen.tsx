@@ -28,7 +28,8 @@ const MAX_IMAGE_SIZE_BYTES = 3_000_000; // ~3MB
 const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<(typeof GENDER_OPTIONS)[number] | ''>('');
   const [matchPreference, setMatchPreference] = useState<(typeof MATCH_PREFERENCE_OPTIONS)[number] | ''>('');
@@ -89,7 +90,17 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   };
 
   const handleRegister = async () => {
-    if (!email || !password || !name || !age || !gender || !matchPreference || !city || !description) {
+    if (
+      !email ||
+      !password ||
+      !firstName ||
+      !lastName ||
+      !age ||
+      !gender ||
+      !matchPreference ||
+      !city ||
+      !description
+    ) {
       Alert.alert('Champs manquants', 'Merci de remplir tous les champs obligatoires.');
       return;
     }
@@ -127,7 +138,8 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       await register({
         email: email.toLowerCase().trim(),
         password,
-        name: name.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         age: ageNum,
         gender: gender.trim(),
         matchPreference,
@@ -180,14 +192,24 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
                 autoComplete="password-new"
               />
 
-              <Text style={styles.label}>Prénom ou pseudo</Text>
+              <Text style={styles.label}>Prénom</Text>
               <TextInput
                 style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Votre prénom ou pseudo"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Votre prénom"
                 placeholderTextColor={Colors.textTertiary}
-                autoComplete="name"
+                autoComplete="name-given"
+              />
+
+              <Text style={styles.label}>Nom</Text>
+              <TextInput
+                style={styles.input}
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Votre nom"
+                placeholderTextColor={Colors.textTertiary}
+                autoComplete="name-family"
               />
 
               <Text style={styles.label}>Âge</Text>

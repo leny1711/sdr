@@ -29,7 +29,9 @@ export class AuthService {
   static async register(data: {
     email: string;
     password: string;
-    name: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
     age: number;
     gender: string;
     matchPreference: string;
@@ -59,9 +61,16 @@ export class AuthService {
 
     const hashedPassword = await this.hashPassword(data.password);
 
+    const { firstName, lastName, name, ...rest } = data;
+    const fullName = name ?? `${firstName ?? ''} ${lastName ?? ''}`.trim();
+    if (!fullName) {
+      throw new Error('Le nom complet est requis');
+    }
+
     const user = await prisma.user.create({
       data: {
-        ...data,
+        ...rest,
+        name: fullName,
         password: hashedPassword,
         isActive: true,
       },
@@ -82,7 +91,14 @@ export class AuthService {
 
     const token = this.generateToken({ userId: user.id, email: user.email });
 
-    return { user, token };
+    return {
+      user: {
+        ...user,
+        firstName: firstName ?? fullName.split(' ')[0] ?? '',
+        lastName: lastName ?? fullName.split(' ').slice(1).join(' '),
+      },
+      token,
+    };
   }
 
   static async login(email: string, password: string) {
@@ -108,6 +124,16 @@ export class AuthService {
 
     const { password: _, ...userWithoutPassword } = user;
 
-    return { user: userWithoutPassword, token };
+    const [firstName = '', ...lastParts] = (userWithoutPassword.name ?? '').trim().split(' ');
+    const lastName = lastParts.join(' ');
+
+    return {
+      user: {
+        ...userWithoutPassword,
+        firstName,
+        lastName,
+      },
+      token,
+    };
   }
 }

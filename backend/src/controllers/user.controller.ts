@@ -27,10 +27,12 @@ export class UserController {
   static async updateProfile(req: AuthRequest, res: Response) {
     try {
       const userId = req.user!.userId;
-      const { name, age, gender, matchPreference, city, description, photoUrl } = req.body;
+      const { name, firstName, lastName, age, gender, matchPreference, city, description, photoUrl } = req.body;
 
       const user = await UserService.updateProfile(userId, {
         name,
+        firstName,
+        lastName,
         age: age ? parseInt(age) : undefined,
         gender,
         matchPreference,

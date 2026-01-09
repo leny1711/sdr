@@ -11,7 +11,8 @@ router.post(
   validate([
     body('email').isEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('name').notEmpty().withMessage('Name is required'),
+    body('firstName').notEmpty().withMessage('Le prénom est requis'),
+    body('lastName').notEmpty().withMessage('Le nom est requis'),
     body('age').isInt({ min: 18, max: 100 }).withMessage('Age must be between 18 and 100'),
     body('gender').notEmpty().withMessage('Gender is required'),
     body('city').notEmpty().withMessage('City is required'),

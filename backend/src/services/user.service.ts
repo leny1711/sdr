@@ -23,11 +23,20 @@ export class UserService {
       throw new Error('Utilisateur introuvable');
     }
 
-    return user;
+    const [firstName = '', ...lastParts] = (user.name ?? '').trim().split(' ');
+    const lastName = lastParts.join(' ');
+
+    return {
+      ...user,
+      firstName,
+      lastName,
+    };
   }
 
   static async updateProfile(userId: string, data: {
     name?: string;
+    firstName?: string;
+    lastName?: string;
     age?: number;
     gender?: string;
     matchPreference?: string;
@@ -35,9 +44,16 @@ export class UserService {
     description?: string;
     photoUrl?: string;
   }) {
+    const { firstName, lastName, ...rest } = data;
+    const payload = { ...rest };
+
+    if (!payload.name && (firstName || lastName)) {
+      payload.name = `${firstName ?? ''} ${lastName ?? ''}`.trim();
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
-      data,
+      data: payload,
       select: {
         id: true,
         email: true,
@@ -53,7 +69,14 @@ export class UserService {
       },
     });
 
-    return user;
+    const [firstName = '', ...lastParts] = (user.name ?? '').trim().split(' ');
+    const lastName = lastParts.join(' ');
+
+    return {
+      ...user,
+      firstName,
+      lastName,
+    };
   }
 
   static async deactivateAccount(userId: string) {
