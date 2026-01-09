@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -14,7 +15,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
-import AnimatedTextInput from '../components/AnimatedTextInput';
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -55,7 +55,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
 
             <View style={styles.form}>
               <Text style={styles.label}>Email</Text>
-              <AnimatedTextInput
+              <TextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
@@ -67,7 +67,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
               />
 
               <Text style={styles.label}>Password</Text>
-              <AnimatedTextInput
+              <TextInput
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
