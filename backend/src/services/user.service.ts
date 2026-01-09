@@ -69,12 +69,12 @@ export class UserService {
       },
     });
 
-    const { firstName, lastName } = splitFullName(user.name);
+    const { firstName: parsedFirstName, lastName: parsedLastName } = splitFullName(user.name);
 
     return {
       ...user,
-      firstName,
-      lastName,
+      firstName: parsedFirstName,
+      lastName: parsedLastName,
     };
   }
 
