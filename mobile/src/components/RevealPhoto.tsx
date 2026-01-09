@@ -30,7 +30,7 @@ const PERCENTAGE_MAX = 100;
 const RevealPhoto = ({
   photoUrl,
   revealLevel,
-  photoHidden: _photoHidden,
+  photoHidden: _photoHidden = false,
   containerStyle,
   imageStyle,
   borderRadius,
