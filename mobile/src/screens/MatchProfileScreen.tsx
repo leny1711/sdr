@@ -12,6 +12,8 @@ type MatchProfileRouteProp = RouteProp<AppStackParamList, 'MatchProfile'>;
 const MatchProfileScreen = () => {
   const { params } = useRoute<MatchProfileRouteProp>();
   const { user, revealLevel } = params;
+  const ageLabel = typeof user.age === 'number' ? user.age : 'Âge inconnu';
+  const cityLabel = user.city || 'Ville inconnue';
 
   return (
     <Screen>
@@ -31,7 +33,7 @@ const MatchProfileScreen = () => {
 
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.info}>
-          {user.age} • {user.city}
+          {ageLabel} • {cityLabel}
         </Text>
         <Text style={styles.reveal}>{getRevealChapter(revealLevel)}</Text>
 

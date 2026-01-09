@@ -50,8 +50,11 @@ const RevealPhoto = ({
         style={[
           styles.image,
           radiusStyle,
-          effects.grayscale && styles.grayscaleImageWeb,
-          effects.grayscale && styles.grayscaleImageNative,
+          effects.grayscale
+            ? Platform.OS === 'web'
+              ? styles.grayscaleImageWeb
+              : styles.grayscaleImageNative
+            : undefined,
           imageStyle,
         ]}
         blurRadius={effects.blurRadius}
@@ -63,7 +66,7 @@ const RevealPhoto = ({
             styles.overlay,
             radiusStyle,
             effects.grayscale && styles.overlayMuted,
-            { opacity: effects.overlayOpacity + (effects.grayscale ? 0.12 : 0) },
+            { opacity: effects.overlayOpacity },
           ]}
         />
       )}
@@ -89,7 +92,9 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as unknown as ImageStyle) : {}),
   },
   grayscaleImageNative: {
-    ...(Platform.OS !== 'web' ? ({ tintColor: '#7a7a7a' } as ImageStyle) : {}),
+    ...(Platform.OS !== 'web'
+      ? ({ tintColor: Colors.textPrimary, opacity: 0.9 } as ImageStyle)
+      : {}),
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

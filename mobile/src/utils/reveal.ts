@@ -28,11 +28,11 @@ export const getPhotoEffects = (level: number) => {
   const grayscale = clampedLevel < 3;
 
   if (clampedLevel === 0) {
-    return { blurRadius: 24, grayscale, overlayOpacity: 0.45 };
+    return { blurRadius: 24, grayscale, overlayOpacity: 0.57 };
   }
 
-  if (clampedLevel === 1) return { blurRadius: 18, grayscale, overlayOpacity: 0.35 };
-  if (clampedLevel === 2) return { blurRadius: 10, grayscale, overlayOpacity: 0.22 };
+  if (clampedLevel === 1) return { blurRadius: 18, grayscale, overlayOpacity: 0.47 };
+  if (clampedLevel === 2) return { blurRadius: 10, grayscale, overlayOpacity: 0.34 };
   if (clampedLevel === 3) return { blurRadius: 4, grayscale: false, overlayOpacity: 0.12 };
 
   return { blurRadius: 0, grayscale: false, overlayOpacity: 0 };
