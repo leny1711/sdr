@@ -3,6 +3,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../config/env';
 import prisma from '../config/database';
 import { JWTPayload } from '../types';
+import { GENDER_OPTIONS, MATCH_PREFERENCE_OPTIONS } from '../constants/user.constants';
 
 export class AuthService {
   private static SALT_ROUNDS = 10;
@@ -31,16 +32,29 @@ export class AuthService {
     name: string;
     age: number;
     gender: string;
+    matchPreference: string;
     city: string;
     description: string;
-    photoUrl?: string;
+    photoUrl: string;
   }) {
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (existingUser) {
-      throw new Error('Email already exists');
+      throw new Error('Cet email est déjà utilisé');
+    }
+
+    if (!data.photoUrl) {
+      throw new Error('Une photo de profil est requise');
+    }
+
+    if (!GENDER_OPTIONS.includes(data.gender as (typeof GENDER_OPTIONS)[number])) {
+      throw new Error('Genre invalide');
+    }
+
+    if (!MATCH_PREFERENCE_OPTIONS.includes(data.matchPreference as (typeof MATCH_PREFERENCE_OPTIONS)[number])) {
+      throw new Error('Préférence de rencontre invalide');
     }
 
     const hashedPassword = await this.hashPassword(data.password);
@@ -57,6 +71,7 @@ export class AuthService {
         name: true,
         age: true,
         gender: true,
+        matchPreference: true,
         city: true,
         description: true,
         photoUrl: true,
@@ -76,17 +91,17 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new Error('Identifiants invalides');
     }
 
     if (!user.isActive) {
-      throw new Error('Account is deactivated');
+      throw new Error('Le compte est désactivé');
     }
 
     const isPasswordValid = await this.comparePassword(password, user.password);
 
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw new Error('Identifiants invalides');
     }
 
     const token = this.generateToken({ userId: user.id, email: user.email });

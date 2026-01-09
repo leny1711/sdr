@@ -38,7 +38,7 @@ export class DiscoveryController {
           matched: !!result.match,
           matchId: result.match?.id,
         },
-        message: result.match ? 'It\'s a match!' : 'Like sent',
+        message: result.match ? 'C\'est un match !' : 'Like envoyé',
       });
     } catch (error) {
       if (error instanceof Error) {

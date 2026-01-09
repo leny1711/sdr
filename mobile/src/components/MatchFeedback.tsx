@@ -57,13 +57,13 @@ const MatchFeedback = ({ visible, name, onHide, trigger }: MatchFeedbackProps) =
         style={styles.closeButton}
         onPress={onHide}
         accessibilityRole="button"
-        accessibilityLabel="Dismiss match notification"
+        accessibilityLabel="Fermer la notification de match"
       >
         <Text style={styles.closeText}>×</Text>
       </TouchableOpacity>
-      <Text style={styles.title}>🎉 It's a Match! 🎉</Text>
+      <Text style={styles.title}>🎉 C’est un match ! 🎉</Text>
       <Text style={styles.text}>
-        You and {name} matched! Start chatting to reveal their photo.
+        Vous et {name} avez matché ! Discutez pour révéler sa photo.
       </Text>
     </Animated.View>
   );

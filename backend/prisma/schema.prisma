@@ -14,9 +14,10 @@ model User {
   name              String
   age               Int
   gender            String
+  matchPreference   String  @default("Les deux")
   city              String
   description       String   @db.Text
-  photoUrl          String?
+  photoUrl          String
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

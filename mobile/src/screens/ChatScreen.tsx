@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Image,
 } from 'react-native';
 import { RouteProp, useIsFocused, useRoute } from '@react-navigation/native';
 import apiService from '../services/api';
@@ -23,7 +24,7 @@ import AnimatedTextInput from '../components/AnimatedTextInput';
 import { markConversationAsRead } from '../services/unreadStorage';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
-const conversationUnavailableMessage = 'This conversation is unavailable.';
+const conversationUnavailableMessage = 'Cette conversation est indisponible.';
 
 const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) => {
   const cached = cache.get(message);
@@ -37,7 +38,7 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
 
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();
-  const { conversationId: routeConversationId, matchName } = route.params;
+  const { conversationId: routeConversationId, matchName, matchPhotoUrl } = route.params;
   const conversationId =
     typeof routeConversationId === 'string' ? routeConversationId.trim() || undefined : undefined;
   const isFocused = useIsFocused();
@@ -100,7 +101,7 @@ const ChatScreen = () => {
 
   const ensureConversation = () => {
     if (!conversationId) {
-      Alert.alert('Error', conversationUnavailableMessage);
+      Alert.alert('Erreur', conversationUnavailableMessage);
       return false;
     }
     return true;
@@ -159,7 +160,7 @@ const ChatScreen = () => {
       const data = await apiService.getConversation(conversationId);
       setConversation(data);
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to load conversation');
+      Alert.alert('Erreur', 'Impossible de charger la conversation.');
     }
   };
 
@@ -173,11 +174,11 @@ const ChatScreen = () => {
         setMessages(dedupeMessages(data));
       } else {
         console.error('Invalid messages data received:', data);
-        Alert.alert('Error', 'Failed to load messages: Invalid data format');
+        Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
         setMessages([]);
       }
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to load messages');
+      Alert.alert('Erreur', 'Impossible de charger les messages.');
     } finally {
       setIsLoading(false);
     }
@@ -194,7 +195,7 @@ const ChatScreen = () => {
     if (!ensureConversation() || !conversationId) return;
     if (!inputText.trim() || isSending) return;
     if (!user?.id) {
-      Alert.alert('Error', 'Unable to send message: User not authenticated');
+      Alert.alert('Erreur', 'Impossible d’envoyer le message : utilisateur non authentifié.');
       return;
     }
 
@@ -225,7 +226,7 @@ const ChatScreen = () => {
       });
       // Real message will be received via socket and will replace the optimistic one
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to send message');
+      Alert.alert('Erreur', 'Envoi du message impossible.');
       // Remove optimistic message on error
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       setInputText(messageText);
@@ -272,15 +273,15 @@ const ChatScreen = () => {
   const getRevealLevelText = (level: number): string => {
     switch (level) {
       case 0:
-        return 'Fully blurred, B&W';
+        return 'Très floutée, N&B';
       case 1:
-        return 'Lightly visible, B&W';
+        return 'Légèrement visible, N&B';
       case 2:
-        return 'Mostly visible, B&W';
+        return 'Plutôt visible, N&B';
       case 3:
-        return 'Fully visible, Color';
+        return 'Totalement visible, couleur';
       default:
-        return 'Unknown';
+        return 'Inconnu';
     }
   };
 
@@ -316,7 +317,7 @@ const ChatScreen = () => {
       <Screen edges={['bottom']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.textPrimary} />
-          <Text style={styles.loadingText}>Loading messages...</Text>
+          <Text style={styles.loadingText}>Chargement des messages...</Text>
         </View>
       </Screen>
     );
@@ -330,17 +331,28 @@ const ChatScreen = () => {
         keyboardVerticalOffset={90}
       >
         <View style={styles.header}>
-          <Text style={styles.matchName}>{matchName}</Text>
-          {conversation && (
-            <View style={styles.revealInfo}>
-              <Text style={styles.revealText}>
-                Photo: {getRevealLevelText(conversation.revealLevel)}
-              </Text>
-              <Text style={styles.messageCount}>
-                {conversation.textMessageCount} messages
-              </Text>
+          <View style={styles.headerTop}>
+            {matchPhotoUrl ? (
+              <Image source={{ uri: matchPhotoUrl }} style={styles.headerAvatar} />
+            ) : (
+              <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+                <Text style={styles.headerAvatarText}>{matchName?.[0]?.toUpperCase() || '?'}</Text>
+              </View>
+            )}
+            <View style={styles.headerTextArea}>
+              <Text style={styles.matchName}>{matchName}</Text>
+              {conversation && (
+                <View style={styles.revealInfo}>
+                  <Text style={styles.revealText}>
+                    Photo : {getRevealLevelText(conversation.revealLevel)}
+                  </Text>
+                  <Text style={styles.messageCount}>
+                    {conversation.textMessageCount} messages
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
+          </View>
         </View>
 
         <FlatList
@@ -355,7 +367,7 @@ const ChatScreen = () => {
 
         {typingUser && (
           <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>{matchName} is typing...</Text>
+            <Text style={styles.typingText}>{matchName} écrit...</Text>
           </View>
         )}
 
@@ -364,7 +376,7 @@ const ChatScreen = () => {
             style={styles.input}
             value={inputText}
             onChangeText={handleInputChange}
-            placeholder="Type a message..."
+            placeholder="Écrire un message..."
             placeholderTextColor={Colors.textTertiary}
             multiline
             maxLength={1000}
@@ -375,7 +387,7 @@ const ChatScreen = () => {
               onPress={handleSend}
               disabled={!inputText.trim() || isSending}
             >
-              <Text style={styles.sendButtonText}>Send</Text>
+              <Text style={styles.sendButtonText}>Envoyer</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -393,6 +405,32 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  headerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  headerAvatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerAvatarText: {
+    fontSize: Typography.lg,
+    color: Colors.textSecondary,
+    fontFamily: Typography.fontSans,
+    fontWeight: '700',
+  },
+  headerTextArea: {
+    flex: 1,
   },
   matchName: {
     fontSize: Typography.xl,

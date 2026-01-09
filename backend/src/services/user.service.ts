@@ -10,6 +10,7 @@ export class UserService {
         name: true,
         age: true,
         gender: true,
+        matchPreference: true,
         city: true,
         description: true,
         photoUrl: true,
@@ -19,7 +20,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error('Utilisateur introuvable');
     }
 
     return user;
@@ -28,6 +29,8 @@ export class UserService {
   static async updateProfile(userId: string, data: {
     name?: string;
     age?: number;
+    gender?: string;
+    matchPreference?: string;
     city?: string;
     description?: string;
     photoUrl?: string;
@@ -41,6 +44,7 @@ export class UserService {
         name: true,
         age: true,
         gender: true,
+        matchPreference: true,
         city: true,
         description: true,
         photoUrl: true,
