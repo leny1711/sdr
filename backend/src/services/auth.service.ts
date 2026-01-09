@@ -4,6 +4,7 @@ import { config } from '../config/env';
 import prisma from '../config/database';
 import { JWTPayload } from '../types';
 import { GENDER_OPTIONS, MATCH_PREFERENCE_OPTIONS } from '../constants/user.constants';
+import { buildFullName, splitFullName } from '../utils/name.utils';
 
 export class AuthService {
   private static SALT_ROUNDS = 10;
@@ -29,7 +30,9 @@ export class AuthService {
   static async register(data: {
     email: string;
     password: string;
-    name: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
     age: number;
     gender: string;
     matchPreference: string;
@@ -59,9 +62,16 @@ export class AuthService {
 
     const hashedPassword = await this.hashPassword(data.password);
 
+    const { firstName, lastName, name, ...rest } = data;
+    const fullName = buildFullName(firstName, lastName, name);
+    if (!fullName) {
+      throw new Error('Le nom complet est requis');
+    }
+
     const user = await prisma.user.create({
       data: {
-        ...data,
+        ...rest,
+        name: fullName,
         password: hashedPassword,
         isActive: true,
       },
@@ -82,7 +92,13 @@ export class AuthService {
 
     const token = this.generateToken({ userId: user.id, email: user.email });
 
-    return { user, token };
+    return {
+      user: {
+        ...user,
+        ...splitFullName(fullName),
+      },
+      token,
+    };
   }
 
   static async login(email: string, password: string) {
@@ -108,6 +124,15 @@ export class AuthService {
 
     const { password: _, ...userWithoutPassword } = user;
 
-    return { user: userWithoutPassword, token };
+    const { firstName, lastName } = splitFullName(userWithoutPassword.name);
+
+    return {
+      user: {
+        ...userWithoutPassword,
+        firstName,
+        lastName,
+      },
+      token,
+    };
   }
 }

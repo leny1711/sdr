@@ -2,6 +2,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   age: number;
   gender: string;
   matchPreference: string;
@@ -58,7 +60,8 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   age: number;
   gender: string;
   matchPreference: string;
