@@ -85,7 +85,7 @@ class ApiService {
     const data = response.data.data;
 
     if (!data) {
-      throw new Error('Invalid like response');
+      throw new Error('Réponse de like invalide');
     }
 
     return {

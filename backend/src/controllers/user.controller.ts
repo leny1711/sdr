@@ -27,11 +27,13 @@ export class UserController {
   static async updateProfile(req: AuthRequest, res: Response) {
     try {
       const userId = req.user!.userId;
-      const { name, age, city, description, photoUrl } = req.body;
+      const { name, age, gender, matchPreference, city, description, photoUrl } = req.body;
 
       const user = await UserService.updateProfile(userId, {
         name,
         age: age ? parseInt(age) : undefined,
+        gender,
+        matchPreference,
         city,
         description,
         photoUrl,
@@ -60,7 +62,7 @@ export class UserController {
 
       return res.status(200).json({
         success: true,
-        message: 'Account deactivated successfully',
+        message: 'Compte désactivé avec succès',
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -81,7 +83,7 @@ export class UserController {
 
       return res.status(200).json({
         success: true,
-        message: 'Account deleted successfully',
+        message: 'Compte supprimé avec succès',
       });
     } catch (error) {
       if (error instanceof Error) {

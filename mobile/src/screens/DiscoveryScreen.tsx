@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import apiService from '../services/api';
 import { DiscoverableUser } from '../types';
@@ -32,7 +33,7 @@ const DiscoveryScreen = () => {
       setUsers(data);
       setCurrentIndex(0);
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to load profiles');
+      Alert.alert('Erreur', 'Impossible de charger les profils.');
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +61,7 @@ const DiscoveryScreen = () => {
       }
       moveToNext();
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to like user');
+      Alert.alert('Erreur', 'Impossible de liker ce profil.');
     } finally {
       setIsActionLoading(false);
     }
@@ -75,7 +76,7 @@ const DiscoveryScreen = () => {
       await apiService.dislikeUser(currentUser.id);
       moveToNext();
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to pass user');
+      Alert.alert('Erreur', 'Impossible de passer ce profil.');
     } finally {
       setIsActionLoading(false);
     }
@@ -95,7 +96,7 @@ const DiscoveryScreen = () => {
       <Screen>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.textPrimary} />
-          <Text style={styles.loadingText}>Loading profiles...</Text>
+          <Text style={styles.loadingText}>Chargement des profils...</Text>
         </View>
       </Screen>
     );
@@ -105,12 +106,10 @@ const DiscoveryScreen = () => {
     return (
       <Screen>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No More Profiles</Text>
-          <Text style={styles.emptyText}>
-            Check back later for new people to discover.
-          </Text>
+          <Text style={styles.emptyTitle}>Plus aucun profil</Text>
+          <Text style={styles.emptyText}>Revenez plus tard pour découvrir de nouvelles personnes.</Text>
           <TouchableOpacity style={styles.refreshButton} onPress={loadUsers}>
-            <Text style={styles.refreshButtonText}>Refresh</Text>
+            <Text style={styles.refreshButtonText}>Actualiser</Text>
           </TouchableOpacity>
         </View>
       </Screen>
@@ -122,14 +121,21 @@ const DiscoveryScreen = () => {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Discovery</Text>
+        <Text style={styles.headerTitle}>Découvertes</Text>
         <Text style={styles.counter}>
-          {currentIndex + 1} of {users.length}
+          {currentIndex + 1} / {users.length}
         </Text>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
+          {currentUser.photoUrl ? (
+            <Image source={{ uri: currentUser.photoUrl }} style={styles.photo} />
+          ) : (
+            <View style={[styles.photo, styles.photoPlaceholder]}>
+              <Text style={styles.photoPlaceholderText}>Photo indisponible</Text>
+            </View>
+          )}
           <Text style={styles.name}>{currentUser.name}</Text>
           <Text style={styles.info}>
             {currentUser.age} • {currentUser.city}
@@ -147,7 +153,7 @@ const DiscoveryScreen = () => {
           onPress={handlePass}
           disabled={isActionLoading}
         >
-          <Text style={styles.actionButtonText}>Pass</Text>
+          <Text style={styles.actionButtonText}>Passer</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -155,7 +161,7 @@ const DiscoveryScreen = () => {
           onPress={handleLike}
           disabled={isActionLoading}
         >
-          <Text style={[styles.actionButtonText, styles.likeButtonText]}>Like</Text>
+          <Text style={[styles.actionButtonText, styles.likeButtonText]}>Aimer</Text>
         </TouchableOpacity>
       </View>
     </Screen>
@@ -194,6 +200,23 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.borderLight,
+  },
+  photo: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.bgPrimary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  photoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPlaceholderText: {
+    color: Colors.textTertiary,
+    fontFamily: Typography.fontSans,
   },
   name: {
     fontSize: Typography.xxl,

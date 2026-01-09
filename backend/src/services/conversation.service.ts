@@ -29,11 +29,11 @@ export class ConversationService {
     });
 
     if (!conversation) {
-      throw new Error('Conversation not found');
+      throw new Error('Conversation introuvable');
     }
 
     if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
-      throw new Error('Unauthorized access to conversation');
+      throw new Error('Accès non autorisé à cette conversation');
     }
 
     const otherUser = conversation.user1Id === userId ? conversation.user2 : conversation.user1;
@@ -50,11 +50,11 @@ export class ConversationService {
     });
 
     if (!conversation) {
-      throw new Error('Conversation not found');
+      throw new Error('Conversation introuvable');
     }
 
     if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
-      throw new Error('Unauthorized access to conversation');
+      throw new Error('Accès non autorisé à cette conversation');
     }
 
     const messages = await prisma.message.findMany({

@@ -4,6 +4,7 @@ export interface User {
   name: string;
   age: number;
   gender: string;
+  matchPreference: string;
   city: string;
   description: string;
   photoUrl?: string | null;
@@ -60,8 +61,10 @@ export interface RegisterRequest {
   name: string;
   age: number;
   gender: string;
+  matchPreference: string;
   city: string;
   description: string;
+  photoUrl: string;
 }
 
 export interface DiscoverableUser extends User {

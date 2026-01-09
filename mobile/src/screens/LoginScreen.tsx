@@ -28,7 +28,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Champs manquants', 'Merci de renseigner votre email et votre mot de passe.');
       return;
     }
 
@@ -36,7 +36,10 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
     try {
       await login({ email: email.toLowerCase().trim(), password });
     } catch (error: any) {
-      Alert.alert('Login Failed', error.response?.data?.message || 'Invalid credentials');
+      Alert.alert(
+        'Connexion impossible',
+        error.response?.data?.message || error.response?.data?.error || 'Identifiants invalides'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +54,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
             <Text style={styles.title}>SDR</Text>
-            <Text style={styles.subtitle}>Text-First Dating</Text>
+            <Text style={styles.subtitle}>Rencontres centrées sur la conversation</Text>
 
             <View style={styles.form}>
               <Text style={styles.label}>Email</Text>
@@ -59,19 +62,19 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="your@email.com"
+                placeholder="votre@email.com"
                 placeholderTextColor={Colors.textTertiary}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoComplete="email"
               />
 
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>Mot de passe</Text>
               <TextInput
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Password"
+                placeholder="Mot de passe"
                 placeholderTextColor={Colors.textTertiary}
                 secureTextEntry
                 autoComplete="password"
@@ -82,11 +85,11 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                 onPress={handleLogin}
                 disabled={isLoading}
               >
-                <Text style={styles.buttonText}>{isLoading ? 'Logging in...' : 'Login'}</Text>
+                <Text style={styles.buttonText}>{isLoading ? 'Connexion...' : 'Connexion'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.linkText}>Don't have an account? Register</Text>
+                <Text style={styles.linkText}>Pas encore de compte ? Inscription</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -2,6 +2,24 @@ import prisma from '../config/database';
 
 export class DiscoveryService {
   static async getDiscoverableUsers(userId: string, limit: number = 10) {
+    const requester = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        matchPreference: true,
+      },
+    });
+
+    if (!requester) {
+      throw new Error('Utilisateur introuvable');
+    }
+
+    let genderFilter: string | undefined;
+    if (requester.matchPreference === 'Hommes') {
+      genderFilter = 'Homme';
+    } else if (requester.matchPreference === 'Femmes') {
+      genderFilter = 'Femme';
+    }
+
     const blockedIds = await prisma.block.findMany({
       where: {
         OR: [{ blockerId: userId }, { blockedId: userId }],
@@ -29,14 +47,17 @@ export class DiscoveryService {
           notIn: [userId, ...Array.from(blockedUserIds), ...Array.from(likedIds)],
         },
         isActive: true,
+        ...(genderFilter && { gender: genderFilter }),
       },
       select: {
         id: true,
         name: true,
         age: true,
         gender: true,
+        matchPreference: true,
         city: true,
         description: true,
+        photoUrl: true,
         createdAt: true,
       },
       take: limit,
@@ -50,7 +71,7 @@ export class DiscoveryService {
 
   static async likeUser(fromUserId: string, toUserId: string) {
     if (fromUserId === toUserId) {
-      throw new Error('Cannot like yourself');
+      throw new Error('Impossible de vous liker vous-même');
     }
 
     const existingLike = await prisma.like.findUnique({
@@ -63,7 +84,7 @@ export class DiscoveryService {
     });
 
     if (existingLike) {
-      throw new Error('Already liked this user');
+      throw new Error('Utilisateur déjà liké');
     }
 
     const like = await prisma.like.create({
@@ -109,7 +130,7 @@ export class DiscoveryService {
 
   static async dislikeUser(fromUserId: string, toUserId: string) {
     if (fromUserId === toUserId) {
-      throw new Error('Cannot dislike yourself');
+      throw new Error('Impossible de vous auto-refuser');
     }
 
     const existingLike = await prisma.like.findUnique({
@@ -122,7 +143,7 @@ export class DiscoveryService {
     });
 
     if (existingLike) {
-      throw new Error('Already disliked this user');
+      throw new Error('Utilisateur déjà refusé');
     }
 
     const dislike = await prisma.like.create({

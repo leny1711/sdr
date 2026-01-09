@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect, CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -91,11 +92,11 @@ const MatchesScreen = () => {
         setMatches(dedupeMatches(data));
       } else {
         console.error('Invalid matches data received:', data);
-        Alert.alert('Error', 'Failed to load matches: Invalid data format');
+        Alert.alert('Erreur', 'Impossible de charger les matchs (format invalide).');
         setMatches([]);
       }
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to load matches');
+      Alert.alert('Erreur', 'Impossible de charger les matchs.');
     } finally {
       setIsLoading(false);
     }
@@ -132,15 +133,15 @@ const MatchesScreen = () => {
   const getRevealLevelText = (level: number): string => {
     switch (level) {
       case 0:
-        return 'Fully blurred, B&W';
+        return 'Très floutée, N&B';
       case 1:
-        return 'Lightly visible, B&W';
+        return 'Légèrement visible, N&B';
       case 2:
-        return 'Mostly visible, B&W';
+        return 'Plutôt visible, N&B';
       case 3:
-        return 'Fully visible, Color';
+        return 'Totalement visible, couleur';
       default:
-        return 'Unknown';
+        return 'Inconnu';
     }
   };
 
@@ -148,21 +149,22 @@ const MatchesScreen = () => {
     const conversationId = match.conversation?.id;
     const matchedUser = match.user || match.matchedUser;
     if (!conversationId || !matchedUser) {
-      Alert.alert('Error', 'This conversation is unavailable because match details are incomplete.');
+      Alert.alert('Erreur', 'Conversation indisponible : informations de match manquantes.');
       return;
     }
     navigation.navigate('Chat', {
       conversationId,
       matchName: matchedUser.name,
+      matchPhotoUrl: matchedUser.photoUrl || undefined,
     });
   };
 
   const renderMatch = ({ item }: { item: Match }) => {
     const matchedUser = item.user || item.matchedUser;
-    const displayName = matchedUser?.name ?? 'Unknown match';
+    const displayName = matchedUser?.name ?? 'Match inconnu';
     const displayDetails = matchedUser
-      ? `${matchedUser.age ?? 'N/A'} • ${matchedUser.city ?? 'Unknown'}`
-      : 'Details unavailable';
+      ? `${matchedUser.age ?? 'N/A'} • ${matchedUser.city ?? 'Inconnue'}`
+      : 'Détails indisponibles';
     const revealLevel = item.conversation?.revealLevel ?? 0;
     const messageCount = item.conversation?.textMessageCount ?? 0;
     const unreadCount = getUnreadCount(item);
@@ -173,22 +175,31 @@ const MatchesScreen = () => {
     return (
       <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
         <View style={styles.matchInfo}>
-          <View style={styles.nameRow}>
-            <Text style={styles.matchName}>{displayName}</Text>
-            {unreadCount > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.matchDetails}>{displayDetails}</Text>
-          <View style={styles.revealInfo}>
-            <Text style={styles.revealText}>
-              Photo: {getRevealLevelText(revealLevel)}
-            </Text>
-            <Text style={messageCountStyle}>
-              {messageCount} messages
-            </Text>
+          {matchedUser?.photoUrl ? (
+            <Image source={{ uri: matchedUser.photoUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarPlaceholderText}>?</Text>
+            </View>
+          )}
+          <View style={styles.matchTextArea}>
+            <View style={styles.nameRow}>
+              <Text style={styles.matchName}>{displayName}</Text>
+              {unreadCount > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.matchDetails}>{displayDetails}</Text>
+            <View style={styles.revealInfo}>
+              <Text style={styles.revealText}>
+                Photo : {getRevealLevelText(revealLevel)}
+              </Text>
+              <Text style={messageCountStyle}>
+                {messageCount} messages
+              </Text>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -200,7 +211,7 @@ const MatchesScreen = () => {
       <Screen>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.textPrimary} />
-          <Text style={styles.loadingText}>Loading matches...</Text>
+          <Text style={styles.loadingText}>Chargement des matchs...</Text>
         </View>
       </Screen>
     );
@@ -210,13 +221,11 @@ const MatchesScreen = () => {
     return (
       <Screen>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Matches</Text>
+          <Text style={styles.headerTitle}>Matchs</Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No Matches Yet</Text>
-          <Text style={styles.emptyText}>
-            Start discovering profiles to find your matches.
-          </Text>
+          <Text style={styles.emptyTitle}>Aucun match pour le moment</Text>
+          <Text style={styles.emptyText}>Découvrez des profils pour trouver vos matchs.</Text>
         </View>
       </Screen>
     );
@@ -225,7 +234,7 @@ const MatchesScreen = () => {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Matches</Text>
+        <Text style={styles.headerTitle}>Matchs</Text>
         <Text style={styles.matchCount}>{matches.length}</Text>
       </View>
       <FlatList
@@ -271,6 +280,29 @@ const styles = StyleSheet.create({
   },
   matchInfo: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  matchTextArea: {
+    flex: 1,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  avatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarPlaceholderText: {
+    color: Colors.textTertiary,
+    fontFamily: Typography.fontSans,
+    fontWeight: '700',
   },
   nameRow: {
     flexDirection: 'row',

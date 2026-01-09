@@ -32,6 +32,7 @@ export type AppStackParamList = {
   Chat: {
     conversationId: string;
     matchName: string;
+    matchPhotoUrl?: string;
   };
 };
 
@@ -93,21 +94,21 @@ const TabNavigator = () => {
         name="Discovery" 
         component={DiscoveryScreen}
         options={{
-          tabBarLabel: 'Discovery',
+          tabBarLabel: 'Découvertes',
         }}
       />
       <Tab.Screen 
         name="Matches" 
         component={MatchesScreen}
         options={{
-          tabBarLabel: 'Matches',
+          tabBarLabel: 'Matchs',
         }}
       />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: 'Profil',
         }}
       />
     </Tab.Navigator>

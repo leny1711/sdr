@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
@@ -35,18 +36,18 @@ const ProfileScreen = () => {
 
   const handleSave = async () => {
     if (!name || !age || !city || !description) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Champs manquants', 'Merci de remplir tous les champs.');
       return;
     }
 
     const ageNum = parseInt(age, 10);
     if (isNaN(ageNum) || ageNum < 18) {
-      Alert.alert('Error', 'Age must be at least 18');
+      Alert.alert('Âge invalide', 'Vous devez avoir au moins 18 ans.');
       return;
     }
 
     if (description.length < 100) {
-      Alert.alert('Error', 'Description must be at least 100 characters');
+      Alert.alert('Description trop courte', 'La description doit contenir au moins 100 caractères.');
       return;
     }
 
@@ -60,9 +61,9 @@ const ProfileScreen = () => {
       });
       await refreshUser();
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      Alert.alert('Succès', 'Profil mis à jour avec succès.');
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+      Alert.alert('Erreur', error.response?.data?.message || 'Mise à jour impossible.');
     } finally {
       setIsLoading(false);
     }
@@ -79,9 +80,9 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', onPress: logout, style: 'destructive' },
+    Alert.alert('Déconnexion', 'Voulez-vous vraiment vous déconnecter ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Se déconnecter', onPress: logout, style: 'destructive' },
     ]);
   };
 
@@ -98,10 +99,10 @@ const ProfileScreen = () => {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>Profil</Text>
         {!isEditing && (
           <TouchableOpacity onPress={() => setIsEditing(true)}>
-            <Text style={styles.editButton}>Edit</Text>
+            <Text style={styles.editButton}>Modifier</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -111,20 +112,29 @@ const ProfileScreen = () => {
           <Text style={styles.label}>Email</Text>
           <Text style={styles.value}>{user.email}</Text>
 
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>Photo de profil</Text>
+          {user.photoUrl ? (
+            <Image source={{ uri: user.photoUrl }} style={styles.photo} />
+          ) : (
+            <View style={[styles.photo, styles.photoPlaceholder]}>
+              <Text style={styles.photoPlaceholderText}>Photo manquante</Text>
+            </View>
+          )}
+
+          <Text style={styles.label}>Nom</Text>
           {isEditing ? (
             <AnimatedTextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="Your name"
+              placeholder="Votre nom"
               placeholderTextColor={Colors.textTertiary}
             />
           ) : (
             <Text style={styles.value}>{user.name}</Text>
           )}
 
-          <Text style={styles.label}>Age</Text>
+          <Text style={styles.label}>Âge</Text>
           {isEditing ? (
             <AnimatedTextInput
               style={styles.input}
@@ -138,13 +148,13 @@ const ProfileScreen = () => {
             <Text style={styles.value}>{user.age}</Text>
           )}
 
-          <Text style={styles.label}>City</Text>
+          <Text style={styles.label}>Ville</Text>
           {isEditing ? (
             <AnimatedTextInput
               style={styles.input}
               value={city}
               onChangeText={setCity}
-              placeholder="Your city"
+              placeholder="Votre ville"
               placeholderTextColor={Colors.textTertiary}
             />
           ) : (
@@ -158,17 +168,23 @@ const ProfileScreen = () => {
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Tell your story..."
+                placeholder="Parlez de vous..."
                 placeholderTextColor={Colors.textTertiary}
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
               />
-              <Text style={styles.characterCount}>{description.length}/100 characters</Text>
+              <Text style={styles.characterCount}>{description.length}/100 caractères</Text>
             </>
           ) : (
             <Text style={styles.descriptionValue}>{user.description}</Text>
           )}
+
+          <Text style={styles.label}>Genre</Text>
+          <Text style={styles.value}>{user.gender || 'Non renseigné'}</Text>
+
+          <Text style={styles.label}>Préférences</Text>
+          <Text style={styles.value}>{user.matchPreference || 'Non renseigné'}</Text>
 
           {isEditing && (
             <View style={styles.actions}>
@@ -177,7 +193,7 @@ const ProfileScreen = () => {
                 onPress={handleCancel}
                 disabled={isLoading}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>Annuler</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -186,7 +202,7 @@ const ProfileScreen = () => {
                 disabled={isLoading}
               >
                 <Text style={styles.saveButtonText}>
-                  {isLoading ? 'Saving...' : 'Save'}
+                  {isLoading ? 'Enregistrement...' : 'Enregistrer'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -194,7 +210,7 @@ const ProfileScreen = () => {
 
           {!isEditing && (
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutButtonText}>Logout</Text>
+              <Text style={styles.logoutButtonText}>Se déconnecter</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -249,6 +265,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.borderLight,
+  },
+  photo: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.bgSecondary,
+  },
+  photoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPlaceholderText: {
+    color: Colors.textTertiary,
+    fontFamily: Typography.fontSans,
   },
   descriptionValue: {
     fontSize: Typography.base,
