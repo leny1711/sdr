@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Image,
@@ -21,6 +21,11 @@ type RevealPhotoProps = {
   placeholder?: React.ReactNode;
 };
 
+const GRAYSCALE_TINT = '#c8c8c8';
+const MUTED_OVERLAY_COLOR = 'rgba(0,0,0,0.25)';
+const COVER_OPACITY = 0.32;
+const PERCENTAGE_MAX = 100;
+
 const RevealPhoto = ({
   photoUrl,
   revealLevel,
@@ -30,7 +35,12 @@ const RevealPhoto = ({
   borderRadius,
   placeholder,
 }: RevealPhotoProps) => {
-  const hidden = shouldHidePhoto(revealLevel, photoHidden, photoUrl);
+  const [loadError, setLoadError] = useState(false);
+  useEffect(() => {
+    setLoadError(false);
+  }, [photoUrl]);
+
+  const hidden = shouldHidePhoto(revealLevel, photoHidden, photoUrl) || loadError;
   const radiusStyle = borderRadius !== undefined ? { borderRadius } : undefined;
 
   if (hidden || !photoUrl) {
@@ -42,6 +52,7 @@ const RevealPhoto = ({
   }
 
   const effects = getPhotoEffects(revealLevel);
+  const coverHeight = (effects.coverRatio ?? 0) * PERCENTAGE_MAX;
 
   return (
     <View style={[styles.container, radiusStyle, containerStyle]}>
@@ -58,7 +69,20 @@ const RevealPhoto = ({
           imageStyle,
         ]}
         blurRadius={effects.blurRadius}
+        onError={() => setLoadError(true)}
       />
+      {effects.coverRatio && effects.coverRatio > 0 && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.cover,
+            radiusStyle,
+            {
+              height: `${coverHeight}%`,
+            },
+          ]}
+        />
+      )}
       {(effects.overlayOpacity > 0 || effects.grayscale) && (
         <View
           pointerEvents="none"
@@ -93,7 +117,7 @@ const styles = StyleSheet.create({
   },
   grayscaleImageNative: {
     ...(Platform.OS !== 'web'
-      ? ({ tintColor: Colors.textPrimary, opacity: 0.9 } as ImageStyle)
+      ? ({ tintColor: GRAYSCALE_TINT, opacity: 0.9 } as ImageStyle)
       : {}),
   },
   overlay: {
@@ -101,7 +125,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgPrimary,
   },
   overlayMuted: {
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: MUTED_OVERLAY_COLOR,
+  },
+  cover: {
+    ...StyleSheet.absoluteFillObject,
+    bottom: undefined,
+    backgroundColor: Colors.bgPrimary,
+    opacity: COVER_OPACITY,
   },
   placeholder: {
     ...StyleSheet.absoluteFillObject,

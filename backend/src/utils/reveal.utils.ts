@@ -18,11 +18,13 @@ export const computeRevealLevel = (textMessageCount: number): number => {
 
 export const applyRevealToUser = <T extends WithPhoto>(user: T, revealLevel: number) => {
   const normalizedPhoto = normalizePhotoUrl(user.photoUrl);
-  const photoHidden = !normalizedPhoto || revealLevel === 0;
+
+  const canRevealPhoto = revealLevel >= 0;
+  const photoHidden = !normalizedPhoto || !canRevealPhoto;
 
   return {
     ...user,
-    photoUrl: photoHidden ? null : normalizedPhoto,
+    photoUrl: normalizedPhoto,
     photoHidden,
   };
 };

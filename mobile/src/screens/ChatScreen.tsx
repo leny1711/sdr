@@ -23,7 +23,12 @@ import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import { markConversationAsRead } from '../services/unreadStorage';
 import RevealPhoto from '../components/RevealPhoto';
-import { calculateRevealLevel, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
+import {
+  calculateRevealLevel,
+  getChapterNarrative,
+  getRevealChapter,
+  shouldHidePhoto,
+} from '../utils/reveal';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 const conversationUnavailableMessage = 'Cette conversation est indisponible.';
@@ -166,7 +171,8 @@ const ChatScreen = () => {
             otherUser: prev.otherUser
               ? {
                   ...prev.otherUser,
-                  photoHidden: shouldHidePhoto(newRevealLevel, prev.otherUser.photoHidden, candidatePhoto),
+                  // Ignore previously persisted hidden flag so reveal level can progressively unmask the photo
+                  photoHidden: shouldHidePhoto(newRevealLevel, false, candidatePhoto),
                 }
               : prev.otherUser,
           };
@@ -320,7 +326,7 @@ const ChatScreen = () => {
       photoUnavailableRef.current = false;
     }
     if (previousLevel !== null && currentLevel > previousLevel) {
-      setUnlockedChapter(getRevealChapter(currentLevel));
+      setUnlockedChapter(getChapterNarrative(currentLevel));
       chapterFeedbackAnim.setValue(0);
       Animated.sequence([
         Animated.timing(chapterFeedbackAnim, {

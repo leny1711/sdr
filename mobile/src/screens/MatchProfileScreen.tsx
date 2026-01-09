@@ -14,7 +14,11 @@ const MatchProfileScreen = () => {
   const { user, revealLevel } = params;
   const ageLabel = typeof user.age === 'number' ? user.age : 'Âge inconnu';
   const cityLabel = user.city || 'Ville inconnue';
-  const description = user.description?.trim() ? user.description : 'Description indisponible.';
+  // Keep the description readable but still progressively revealed alongside the photo
+  const DESCRIPTION_BASE_OPACITY = 0.55;
+  const DESCRIPTION_OPACITY_STEP = 0.1;
+  const descriptionText = user.description ?? '';
+  const descriptionOpacity = Math.min(1, DESCRIPTION_BASE_OPACITY + Math.max(0, revealLevel) * DESCRIPTION_OPACITY_STEP);
 
   return (
     <Screen>
@@ -40,7 +44,9 @@ const MatchProfileScreen = () => {
 
         <View style={styles.divider} />
         <Text style={styles.sectionTitle}>Description</Text>
-        <Text style={styles.description}>{description}</Text>
+        <Text style={[styles.description, { opacity: descriptionOpacity }]}>
+          {descriptionText}
+        </Text>
       </ScrollView>
     </Screen>
   );
