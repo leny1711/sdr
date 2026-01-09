@@ -9,15 +9,15 @@ export const calculateRevealLevel = (count: number): number => {
 export const getRevealChapter = (level: number): string => {
   switch (level) {
     case 0:
-      return 'Chapitre 0 • Photo cachée';
+      return 'Chapitre 1 • Début flouté';
     case 1:
-      return 'Chapitre 1 • Silhouette floutée (N&B)';
+      return 'Chapitre 2 • Découverte (flou + N&B)';
     case 2:
-      return 'Chapitre 2 • Les contours se dessinent (N&B)';
+      return 'Chapitre 3 • Connexion (couleurs partielles)';
     case 3:
-      return 'Chapitre 3 • Les couleurs apparaissent';
+      return 'Chapitre 4 • Clarté (presque net)';
     case 4:
-      return 'Chapitre final • Photo dévoilée';
+      return 'Chapitre 5 • Révélation complète';
     default:
       return 'Chapitre inconnu';
   }
@@ -25,21 +25,37 @@ export const getRevealChapter = (level: number): string => {
 
 export const getPhotoEffects = (level: number) => {
   const clampedLevel = Math.max(0, Math.min(4, Math.round(level)));
-  const grayscale = clampedLevel < 3;
+  const grayscale = clampedLevel <= 1;
 
   if (clampedLevel === 0) {
-    return { blurRadius: 24, grayscale, overlayOpacity: 0.57 };
+    return { blurRadius: 22, grayscale, overlayOpacity: 0.28, coverRatio: 0.4 };
   }
 
-  if (clampedLevel === 1) return { blurRadius: 18, grayscale, overlayOpacity: 0.47 };
-  if (clampedLevel === 2) return { blurRadius: 10, grayscale, overlayOpacity: 0.34 };
-  if (clampedLevel === 3) return { blurRadius: 4, grayscale: false, overlayOpacity: 0.12 };
+  if (clampedLevel === 1) return { blurRadius: 16, grayscale, overlayOpacity: 0.18, coverRatio: 0.25 };
+  if (clampedLevel === 2) return { blurRadius: 9, grayscale: false, overlayOpacity: 0.12, coverRatio: 0.12 };
+  if (clampedLevel === 3) return { blurRadius: 4, grayscale: false, overlayOpacity: 0.06, coverRatio: 0 };
 
-  return { blurRadius: 0, grayscale: false, overlayOpacity: 0 };
+  return { blurRadius: 0, grayscale: false, overlayOpacity: 0, coverRatio: 0 };
+};
+
+export const getChapterNarrative = (level: number): string => {
+  switch (Math.max(0, Math.min(4, Math.round(level)))) {
+    case 0:
+      return 'The beginning';
+    case 1:
+      return 'Discovery';
+    case 2:
+      return 'Connection';
+    case 3:
+      return 'Clarity';
+    default:
+      return 'Revelation';
+  }
 };
 
 export const shouldHidePhoto = (revealLevel: number, photoHidden?: boolean, photoUrl?: string | null) => {
   const hasPhoto = !!photoUrl;
   if (!hasPhoto) return true;
-  return revealLevel <= 0 || !!photoHidden;
+  if (photoHidden && revealLevel < 0) return true;
+  return false;
 };

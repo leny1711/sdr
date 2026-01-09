@@ -14,7 +14,7 @@ const MatchProfileScreen = () => {
   const { user, revealLevel } = params;
   const ageLabel = typeof user.age === 'number' ? user.age : 'Âge inconnu';
   const cityLabel = user.city || 'Ville inconnue';
-  const description = user.description?.trim() ? user.description : 'Description indisponible.';
+  const descriptionOpacity = Math.min(1, 0.55 + Math.max(0, revealLevel) * 0.1);
 
   return (
     <Screen>
@@ -40,7 +40,9 @@ const MatchProfileScreen = () => {
 
         <View style={styles.divider} />
         <Text style={styles.sectionTitle}>Description</Text>
-        <Text style={styles.description}>{description}</Text>
+        <Text style={[styles.description, { opacity: descriptionOpacity }]}>
+          {user.description}
+        </Text>
       </ScrollView>
     </Screen>
   );
