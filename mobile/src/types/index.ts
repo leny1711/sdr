@@ -7,7 +7,7 @@ export interface User {
   matchPreference: string;
   city: string;
   description: string;
-  photoUrl?: string | null;
+  photoUrl: string;
   createdAt: string;
 }
 

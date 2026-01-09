@@ -3,11 +3,10 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../config/env';
 import prisma from '../config/database';
 import { JWTPayload } from '../types';
+import { GENDER_OPTIONS, MATCH_PREFERENCE_OPTIONS } from '../constants/user.constants';
 
 export class AuthService {
   private static SALT_ROUNDS = 10;
-  private static ALLOWED_GENDERS = ['Homme', 'Femme', 'Autre'];
-  private static ALLOWED_PREFERENCES = ['Hommes', 'Femmes', 'Les deux'];
 
   static async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, this.SALT_ROUNDS);
@@ -50,11 +49,11 @@ export class AuthService {
       throw new Error('Une photo de profil est requise');
     }
 
-    if (!this.ALLOWED_GENDERS.includes(data.gender)) {
+    if (!GENDER_OPTIONS.includes(data.gender as (typeof GENDER_OPTIONS)[number])) {
       throw new Error('Genre invalide');
     }
 
-    if (!this.ALLOWED_PREFERENCES.includes(data.matchPreference)) {
+    if (!MATCH_PREFERENCE_OPTIONS.includes(data.matchPreference as (typeof MATCH_PREFERENCE_OPTIONS)[number])) {
       throw new Error('Préférence de rencontre invalide');
     }
 

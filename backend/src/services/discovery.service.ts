@@ -1,4 +1,5 @@
 import prisma from '../config/database';
+import { MATCH_PREFERENCE_OPTIONS, GENDER_OPTIONS } from '../constants/user.constants';
 
 export class DiscoveryService {
   static async getDiscoverableUsers(userId: string, limit: number = 10) {
@@ -13,12 +14,22 @@ export class DiscoveryService {
       throw new Error('Utilisateur introuvable');
     }
 
-    let genderFilter: string | undefined;
-    if (requester.matchPreference === 'Hommes') {
-      genderFilter = 'Homme';
-    } else if (requester.matchPreference === 'Femmes') {
-      genderFilter = 'Femme';
-    }
+    const preference: (typeof MATCH_PREFERENCE_OPTIONS)[number] = MATCH_PREFERENCE_OPTIONS.includes(
+      requester.matchPreference as (typeof MATCH_PREFERENCE_OPTIONS)[number]
+    )
+      ? (requester.matchPreference as (typeof MATCH_PREFERENCE_OPTIONS)[number])
+      : 'Les deux';
+
+    const preferenceToGender: Record<
+      (typeof MATCH_PREFERENCE_OPTIONS)[number],
+      (typeof GENDER_OPTIONS)[number] | undefined
+    > = {
+      Hommes: 'Homme',
+      Femmes: 'Femme',
+      'Les deux': undefined,
+    };
+
+    const genderFilter = preferenceToGender[preference];
 
     const blockedIds = await prisma.block.findMany({
       where: {

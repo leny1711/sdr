@@ -17,21 +17,21 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
+import { GENDER_OPTIONS, MATCH_PREFERENCE_OPTIONS } from '../constants/user';
 
 type RegisterScreenProps = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 };
 
-const GENDER_OPTIONS = ['Homme', 'Femme', 'Autre'];
-const MATCH_PREFERENCE_OPTIONS = ['Hommes', 'Femmes', 'Les deux'];
+const MAX_IMAGE_SIZE_BYTES = 3_000_000; // ~3MB
 
 const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
-  const [matchPreference, setMatchPreference] = useState('');
+  const [gender, setGender] = useState<(typeof GENDER_OPTIONS)[number] | ''>('');
+  const [matchPreference, setMatchPreference] = useState<(typeof MATCH_PREFERENCE_OPTIONS)[number] | ''>('');
   const [city, setCity] = useState('');
   const [description, setDescription] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
@@ -56,13 +56,13 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
 
       const result = fromCamera
         ? await ImagePicker.launchCameraAsync({
-            quality: 0.7,
+            quality: 0.6,
             base64: true,
             allowsEditing: true,
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
           })
         : await ImagePicker.launchImageLibraryAsync({
-            quality: 0.7,
+            quality: 0.6,
             base64: true,
             allowsEditing: true,
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -71,7 +71,16 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       if (!result.canceled && result.assets?.length) {
         const asset = result.assets[0];
         const mimeType = asset.mimeType || 'image/jpeg';
-        const dataUrl = asset.base64 ? `data:${mimeType};base64,${asset.base64}` : asset.uri;
+        const base64 = asset.base64 || '';
+        const sizeBytes = base64
+          ? Math.ceil((base64.length * 3) / 4)
+          : asset.fileSize || 0;
+
+        if (sizeBytes > MAX_IMAGE_SIZE_BYTES) {
+          Alert.alert('Photo trop lourde', 'Merci de choisir une image plus légère (max ~3 Mo).');
+          return;
+        }
+        const dataUrl = base64 ? `data:${mimeType};base64,${base64}` : asset.uri;
         setPhotoUrl(dataUrl || '');
       }
     } finally {
@@ -101,12 +110,14 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       return;
     }
 
-    if (!GENDER_OPTIONS.includes(gender)) {
+    if (!GENDER_OPTIONS.includes(gender as (typeof GENDER_OPTIONS)[number])) {
       Alert.alert('Genre invalide', 'Sélectionnez une option dans la liste.');
       return;
     }
 
-    if (!MATCH_PREFERENCE_OPTIONS.includes(matchPreference)) {
+    if (
+      !MATCH_PREFERENCE_OPTIONS.includes(matchPreference as (typeof MATCH_PREFERENCE_OPTIONS)[number])
+    ) {
       Alert.alert('Préférence invalide', 'Sélectionnez une option dans la liste.');
       return;
     }
