@@ -171,6 +171,7 @@ const ChatScreen = () => {
             otherUser: prev.otherUser
               ? {
                   ...prev.otherUser,
+                  // Ignore previously persisted hidden flag so reveal level can progressively unmask the photo
                   photoHidden: shouldHidePhoto(newRevealLevel, false, candidatePhoto),
                 }
               : prev.otherUser,

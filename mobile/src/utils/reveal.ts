@@ -39,7 +39,8 @@ export const getPhotoEffects = (level: number) => {
 };
 
 export const getChapterNarrative = (level: number): string => {
-  switch (Math.max(0, Math.min(4, Math.round(level)))) {
+  const clampedLevel = Math.max(0, Math.min(4, Math.round(level)));
+  switch (clampedLevel) {
     case 0:
       return 'The beginning';
     case 1:
@@ -54,8 +55,8 @@ export const getChapterNarrative = (level: number): string => {
 };
 
 export const shouldHidePhoto = (revealLevel: number, photoHidden?: boolean, photoUrl?: string | null) => {
-  const hasPhoto = !!photoUrl;
-  if (!hasPhoto) return true;
-  if (photoHidden && revealLevel < 0) return true;
+  if (!photoUrl) return true;
+  if (revealLevel < 0) return true;
+  if (photoHidden && revealLevel <= 0) return true;
   return false;
 };
