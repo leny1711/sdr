@@ -40,6 +40,20 @@
   margin-top: var(--spacing-md);
 }
 
+.checkboxGroup {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+}
+
 .error {
   padding: var(--spacing-sm);
   background-color: #FEE;

@@ -1,3 +1,2 @@
-export const GENDER_OPTIONS = ['Homme', 'Femme', 'Autre'] as const;
-
-export const MATCH_PREFERENCE_OPTIONS = ['Hommes', 'Femmes', 'Les deux'] as const;
+export const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
+export const INTEREST_OPTIONS = GENDER_OPTIONS;

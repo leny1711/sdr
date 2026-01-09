@@ -3,7 +3,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../config/env';
 import prisma from '../config/database';
 import { JWTPayload } from '../types';
-import { GENDER_OPTIONS, MATCH_PREFERENCE_OPTIONS } from '../constants/user.constants';
+import { GENDER_OPTIONS, INTEREST_OPTIONS } from '../constants/user.constants';
 import { buildFullName, splitFullName } from '../utils/name.utils';
 
 export class AuthService {
@@ -35,7 +35,7 @@ export class AuthService {
     name?: string;
     age: number;
     gender: string;
-    matchPreference: string;
+    interestedIn: string[];
     city: string;
     description: string;
     photoUrl: string;
@@ -56,8 +56,12 @@ export class AuthService {
       throw new Error('Genre invalide');
     }
 
-    if (!MATCH_PREFERENCE_OPTIONS.includes(data.matchPreference as (typeof MATCH_PREFERENCE_OPTIONS)[number])) {
-      throw new Error('Préférence de rencontre invalide');
+    if (
+      !Array.isArray(data.interestedIn) ||
+      data.interestedIn.length === 0 ||
+      !data.interestedIn.every((value) => INTEREST_OPTIONS.includes(value as (typeof INTEREST_OPTIONS)[number]))
+    ) {
+      throw new Error('Préférences de rencontre invalides');
     }
 
     const hashedPassword = await this.hashPassword(data.password);
@@ -81,7 +85,7 @@ export class AuthService {
         name: true,
         age: true,
         gender: true,
-        matchPreference: true,
+        interestedIn: true,
         city: true,
         description: true,
         photoUrl: true,

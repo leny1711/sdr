@@ -1,4 +1,5 @@
 import prisma from '../config/database';
+import { GENDER_OPTIONS, INTEREST_OPTIONS } from '../constants/user.constants';
 import { splitFullName, buildFullName } from '../utils/name.utils';
 
 export class UserService {
@@ -11,7 +12,7 @@ export class UserService {
         name: true,
         age: true,
         gender: true,
-        matchPreference: true,
+        interestedIn: true,
         city: true,
         description: true,
         photoUrl: true,
@@ -39,7 +40,7 @@ export class UserService {
     lastName?: string;
     age?: number;
     gender?: string;
-    matchPreference?: string;
+    interestedIn?: string[];
     city?: string;
     description?: string;
     photoUrl?: string;
@@ -51,6 +52,23 @@ export class UserService {
       payload.name = buildFullName(firstName, lastName);
     }
 
+    if (payload.gender && !GENDER_OPTIONS.includes(payload.gender as (typeof GENDER_OPTIONS)[number])) {
+      throw new Error('Genre invalide');
+    }
+
+    if (payload.interestedIn !== undefined) {
+      if (
+        !Array.isArray(payload.interestedIn) ||
+        payload.interestedIn.length === 0 ||
+        !payload.interestedIn.every((value) =>
+          INTEREST_OPTIONS.includes(value as (typeof INTEREST_OPTIONS)[number])
+        )
+      ) {
+        throw new Error('Préférences de rencontre invalides');
+      }
+      payload.interestedIn = Array.from(new Set(payload.interestedIn));
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: payload,
@@ -60,7 +78,7 @@ export class UserService {
         name: true,
         age: true,
         gender: true,
-        matchPreference: true,
+        interestedIn: true,
         city: true,
         description: true,
         photoUrl: true,

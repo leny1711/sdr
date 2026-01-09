@@ -27,7 +27,16 @@ export class UserController {
   static async updateProfile(req: AuthRequest, res: Response) {
     try {
       const userId = req.user!.userId;
-      const { name, firstName, lastName, age, gender, matchPreference, city, description, photoUrl } = req.body;
+      const { name, firstName, lastName, age, gender, interestedIn, city, description, photoUrl } = req.body;
+
+      const interestedInList =
+        interestedIn === undefined
+          ? undefined
+          : Array.isArray(interestedIn)
+            ? interestedIn
+            : typeof interestedIn === 'string'
+              ? interestedIn.split(',').map((value: string) => value.trim()).filter(Boolean)
+              : [];
 
       const user = await UserService.updateProfile(userId, {
         name,
@@ -35,7 +44,7 @@ export class UserController {
         lastName,
         age: age ? parseInt(age) : undefined,
         gender,
-        matchPreference,
+        interestedIn: interestedInList,
         city,
         description,
         photoUrl,

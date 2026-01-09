@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiService from '../services/api';
 import { DiscoverableUser } from '../types';
 import { Colors, Typography, Spacing } from '../constants/theme';
@@ -21,6 +22,7 @@ const DiscoveryScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const { showMatch } = useMatchFeedback();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadUsers();
@@ -128,17 +130,19 @@ const DiscoveryScreen = () => {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.card}>
-          {currentUser.photoUrl ? (
-            <Image source={{ uri: currentUser.photoUrl }} style={styles.photo} />
-          ) : (
-            <View style={[styles.photo, styles.photoPlaceholder]}>
-              <Text style={styles.photoPlaceholderText}>Photo indisponible</Text>
-            </View>
-          )}
-          <Text style={styles.name}>{currentUser.name}</Text>
-          <Text style={styles.info}>
-            {currentUser.age} • {currentUser.city}
+          <View style={styles.card}>
+            {currentUser.photoUrl ? (
+              <Image source={{ uri: currentUser.photoUrl }} style={styles.photo} />
+            ) : (
+              <View style={[styles.photo, styles.photoPlaceholder]}>
+                <Text style={styles.photoPlaceholderText}>
+                  Photo cachée jusqu’à un match
+                </Text>
+              </View>
+            )}
+            <Text style={styles.name}>{currentUser.name}</Text>
+            <Text style={styles.info}>
+              {currentUser.age} • {currentUser.city}
           </Text>
 
           <View style={styles.divider} />
@@ -147,7 +151,7 @@ const DiscoveryScreen = () => {
         </View>
       </ScrollView>
 
-      <View style={styles.actions}>
+      <View style={[styles.actions, { paddingBottom: Spacing.lg + Math.max(insets.bottom, 6) }]}>
         <TouchableOpacity
           style={[styles.actionButton, styles.passButton, isActionLoading && styles.buttonDisabled]}
           onPress={handlePass}

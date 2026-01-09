@@ -14,7 +14,8 @@ model User {
   name              String
   age               Int
   gender            String
-  matchPreference   String  @default("Les deux")
+  interestedIn      String[] @default([])
+  matchPreference   String?
   city              String
   description       String   @db.Text
   photoUrl          String

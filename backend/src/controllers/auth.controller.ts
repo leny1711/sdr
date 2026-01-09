@@ -5,8 +5,14 @@ import { AuthService } from '../services/auth.service';
 export class AuthController {
   static async register(req: AuthRequest, res: Response) {
     try {
-      const { email, password, firstName, lastName, name, age, gender, matchPreference, city, description, photoUrl } =
+      const { email, password, firstName, lastName, name, age, gender, interestedIn, city, description, photoUrl } =
         req.body;
+
+      const interestedInList = Array.isArray(interestedIn)
+        ? interestedIn
+        : typeof interestedIn === 'string'
+          ? interestedIn.split(',').map((value: string) => value.trim()).filter(Boolean)
+          : [];
 
       const result = await AuthService.register({
         email,
@@ -16,7 +22,7 @@ export class AuthController {
         name,
         age: parseInt(age),
         gender,
-        matchPreference,
+        interestedIn: interestedInList,
         city,
         description,
         photoUrl,
