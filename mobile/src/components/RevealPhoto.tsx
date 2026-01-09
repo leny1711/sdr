@@ -52,6 +52,8 @@ const RevealPhoto = ({
   }
 
   const effects = getPhotoEffects(revealLevel);
+  const boostedOverlayOpacity = effects.overlayOpacity + (_photoHidden && revealLevel <= 1 ? 0.1 : 0);
+  const overlayOpacity = Math.min(1, boostedOverlayOpacity);
   const coverHeight = (effects.coverRatio ?? 0) * PERCENTAGE_MAX;
 
   return (
@@ -83,14 +85,14 @@ const RevealPhoto = ({
           ]}
         />
       )}
-      {(effects.overlayOpacity > 0 || effects.grayscale) && (
+      {(overlayOpacity > 0 || effects.grayscale) && (
         <View
           pointerEvents="none"
           style={[
             styles.overlay,
             radiusStyle,
             effects.grayscale && styles.overlayMuted,
-            { opacity: effects.overlayOpacity },
+            { opacity: overlayOpacity },
           ]}
         />
       )}
