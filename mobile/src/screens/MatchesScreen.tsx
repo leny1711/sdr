@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Platform,
+  ImageStyle,
 } from 'react-native';
 import { useNavigation, useFocusEffect, CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +20,7 @@ import { AppStackParamList, TabParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import { getConversationReadCounts, ReadCounts } from '../services/unreadStorage';
+import { getPhotoEffects, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
 
 type NavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<AppStackParamList>,
@@ -130,21 +133,6 @@ const MatchesScreen = () => {
     lastBadgeRef.current = unreadTotal;
   }, [parentNavigator, unreadTotal]);
 
-  const getRevealLevelText = (level: number): string => {
-    switch (level) {
-      case 0:
-        return 'Très floutée, N&B';
-      case 1:
-        return 'Légèrement visible, N&B';
-      case 2:
-        return 'Plutôt visible, N&B';
-      case 3:
-        return 'Totalement visible, couleur';
-      default:
-        return 'Inconnu';
-    }
-  };
-
   const handleMatchPress = (match: Match) => {
     const conversationId = match.conversation?.id;
     const matchedUser = match.user || match.matchedUser;
@@ -166,17 +154,32 @@ const MatchesScreen = () => {
       ? `${matchedUser.age ?? 'N/A'} • ${matchedUser.city ?? 'Inconnue'}`
       : 'Détails indisponibles';
     const revealLevel = item.conversation?.revealLevel ?? 0;
-    const messageCount = item.conversation?.textMessageCount ?? 0;
+    const candidatePhoto = matchedUser?.photoUrl || undefined;
+    const photoHidden = shouldHidePhoto(revealLevel, matchedUser?.photoHidden, candidatePhoto);
+    const photoUri = !photoHidden ? candidatePhoto : undefined;
+    const effects = getPhotoEffects(revealLevel);
     const unreadCount = getUnreadCount(item);
-    const messageCountStyle =
-      unreadCount > 0
-        ? [styles.messageCount, styles.messageCountUnread]
-        : styles.messageCount;
     return (
       <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
         <View style={styles.matchInfo}>
-          {matchedUser?.photoUrl ? (
-            <Image source={{ uri: matchedUser.photoUrl }} style={styles.avatar} />
+          {photoUri ? (
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={{ uri: photoUri }}
+                style={[styles.avatar, effects.grayscale && styles.grayscaleImage]}
+                blurRadius={effects.blurRadius}
+              />
+              {(effects.overlayOpacity > 0 || effects.grayscale) && (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.avatarOverlay,
+                    effects.grayscale && styles.avatarOverlayMuted,
+                    { opacity: effects.overlayOpacity },
+                  ]}
+                />
+              )}
+            </View>
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarPlaceholderText}>?</Text>
@@ -194,10 +197,7 @@ const MatchesScreen = () => {
             <Text style={styles.matchDetails}>{displayDetails}</Text>
             <View style={styles.revealInfo}>
               <Text style={styles.revealText}>
-                Photo : {getRevealLevelText(revealLevel)}
-              </Text>
-              <Text style={messageCountStyle}>
-                {messageCount} messages
+                Photo : {getRevealChapter(revealLevel)}
               </Text>
             </View>
           </View>
@@ -287,6 +287,13 @@ const styles = StyleSheet.create({
   matchTextArea: {
     flex: 1,
   },
+  avatarWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    position: 'relative',
+  },
   avatar: {
     width: 64,
     height: 64,
@@ -303,6 +310,17 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontFamily: Typography.fontSans,
     fontWeight: '700',
+  },
+  grayscaleImage: {
+    ...(Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as unknown as ImageStyle) : {}),
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.bgPrimary,
+    borderRadius: 32,
+  },
+  avatarOverlayMuted: {
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   nameRow: {
     flexDirection: 'row',
@@ -345,15 +363,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     fontFamily: Typography.fontSans,
     color: Colors.textTertiary,
-  },
-  messageCount: {
-    fontSize: Typography.sm,
-    fontFamily: Typography.fontSans,
-    color: Colors.textTertiary,
-  },
-  messageCountUnread: {
-    color: Colors.textPrimary,
-    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,

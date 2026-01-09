@@ -58,7 +58,7 @@ class SocketService {
     this.socket?.on('conversation:joined', callback);
   }
 
-  onNewMessage(callback: (message: Message) => void) {
+  onNewMessage(callback: (payload: { message: Message; revealLevel?: number } | Message) => void) {
     this.socket?.on('message:new', callback);
   }
 

@@ -9,6 +9,7 @@ export interface User {
   city: string;
   description: string;
   photoUrl?: string | null;
+  photoHidden?: boolean;
   isActive: boolean;
   createdAt: string;
 }

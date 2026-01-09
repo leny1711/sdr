@@ -7,7 +7,7 @@ export class UserController {
     try {
       const userId = req.params.userId || req.user!.userId;
 
-      const user = await UserService.getUserById(userId);
+      const user = await UserService.getUserById(userId, req.user?.userId);
 
       return res.status(200).json({
         success: true,
@@ -28,6 +28,7 @@ export class UserController {
     try {
       const userId = req.user!.userId;
       const { name, firstName, lastName, age, gender, interestedIn, city, description, photoUrl } = req.body;
+      const normalizedPhotoUrl = photoUrl === null ? '' : photoUrl;
 
       const interestedInList =
         interestedIn === undefined
@@ -47,7 +48,7 @@ export class UserController {
         interestedIn: interestedInList,
         city,
         description,
-        photoUrl,
+        photoUrl: normalizedPhotoUrl,
       });
 
       return res.status(200).json({

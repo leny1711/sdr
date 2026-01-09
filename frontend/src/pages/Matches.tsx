@@ -28,13 +28,15 @@ const Matches: React.FC = () => {
   const getRevealLevelText = (level: number): string => {
     switch (level) {
       case 0:
-        return 'Fully blurred • 0-9 messages';
+        return 'Chapitre 0 • Photo cachée';
       case 1:
-        return 'Lightly visible • 10-19 messages';
+        return 'Chapitre 1 • Silhouette floutée (N&B)';
       case 2:
-        return 'Mostly visible • 20-29 messages';
+        return 'Chapitre 2 • Contours (N&B)';
       case 3:
-        return 'Fully visible • 30+ messages';
+        return 'Chapitre 3 • Couleur partielle';
+      case 4:
+        return 'Chapitre final • Photo dévoilée';
       default:
         return '';
     }
@@ -81,9 +83,6 @@ const Matches: React.FC = () => {
                 <p className={styles.meta}>{match.otherUser.city}</p>
                 <p className={styles.revealLevel}>
                   Photo reveal: {getRevealLevelText(match.conversation.revealLevel)}
-                </p>
-                <p className={styles.messages}>
-                  {match.conversation.textMessageCount} messages exchanged
                 </p>
               </div>
               <div className={styles.arrow}>→</div>

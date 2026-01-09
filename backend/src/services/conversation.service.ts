@@ -1,4 +1,5 @@
 import prisma from '../config/database';
+import { applyRevealToUser, computeRevealLevel, normalizePhotoUrl } from '../utils/reveal.utils';
 
 export class ConversationService {
   static async getConversation(userId: string, conversationId: string) {
@@ -36,10 +37,22 @@ export class ConversationService {
       throw new Error('Accès non autorisé à cette conversation');
     }
 
-    const otherUser = conversation.user1Id === userId ? conversation.user2 : conversation.user1;
+    const revealLevel = conversation.revealLevel ?? 0;
+    const otherUser = applyRevealToUser(
+      conversation.user1Id === userId ? conversation.user2 : conversation.user1,
+      revealLevel
+    );
 
     return {
       ...conversation,
+      user1:
+        conversation.user1Id === userId
+          ? { ...conversation.user1, photoUrl: normalizePhotoUrl(conversation.user1.photoUrl) }
+          : applyRevealToUser(conversation.user1, revealLevel),
+      user2:
+        conversation.user2Id === userId
+          ? { ...conversation.user2, photoUrl: normalizePhotoUrl(conversation.user2.photoUrl) }
+          : applyRevealToUser(conversation.user2, revealLevel),
       otherUser,
     };
   }
@@ -84,10 +97,7 @@ export class ConversationService {
   }
 
   static async calculateRevealLevel(textMessageCount: number): Promise<number> {
-    if (textMessageCount < 10) return 0;
-    if (textMessageCount < 20) return 1;
-    if (textMessageCount < 30) return 2;
-    return 3;
+    return computeRevealLevel(textMessageCount);
   }
 
   static async updateRevealLevel(conversationId: string) {

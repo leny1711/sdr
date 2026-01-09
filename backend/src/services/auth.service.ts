@@ -5,6 +5,7 @@ import prisma from '../config/database';
 import { JWTPayload } from '../types';
 import { GENDER_OPTIONS, INTEREST_OPTIONS } from '../constants/user.constants';
 import { buildFullName, splitFullName } from '../utils/name.utils';
+import { normalizePhotoUrl } from '../utils/reveal.utils';
 
 export class AuthService {
   private static SALT_ROUNDS = 10;
@@ -95,11 +96,14 @@ export class AuthService {
     });
 
     const token = this.generateToken({ userId: user.id, email: user.email });
+    const normalizedPhoto = normalizePhotoUrl(user.photoUrl);
 
     return {
       user: {
         ...user,
         ...splitFullName(fullName),
+        photoUrl: normalizedPhoto,
+        photoHidden: !normalizedPhoto,
       },
       token,
     };
@@ -127,12 +131,15 @@ export class AuthService {
     const token = this.generateToken({ userId: user.id, email: user.email });
 
     const { password: _, ...userWithoutPassword } = user;
+    const normalizedPhoto = normalizePhotoUrl(userWithoutPassword.photoUrl);
 
     const { firstName, lastName } = splitFullName(userWithoutPassword.name);
 
     return {
       user: {
         ...userWithoutPassword,
+        photoUrl: normalizedPhoto,
+        photoHidden: !normalizedPhoto,
         firstName,
         lastName,
       },
