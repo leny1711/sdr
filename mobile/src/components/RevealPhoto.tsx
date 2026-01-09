@@ -27,6 +27,9 @@ const COVER_OPACITY = 0.32;
 const HIDDEN_PHOTO_OVERLAY_BOOST = 0.1;
 const PERCENTAGE_MAX = 100;
 
+const calculateOverlayBoost = (photoHidden: boolean, revealLevel: number) =>
+  photoHidden && revealLevel <= 1 ? HIDDEN_PHOTO_OVERLAY_BOOST : 0;
+
 const RevealPhoto = ({
   photoUrl,
   revealLevel,
@@ -53,8 +56,7 @@ const RevealPhoto = ({
   }
 
   const effects = getPhotoEffects(revealLevel);
-  const boostedOverlayOpacity =
-    effects.overlayOpacity + (_photoHidden && revealLevel <= 1 ? HIDDEN_PHOTO_OVERLAY_BOOST : 0);
+  const boostedOverlayOpacity = effects.overlayOpacity + calculateOverlayBoost(_photoHidden, revealLevel);
   const overlayOpacity = Math.min(1, boostedOverlayOpacity);
   const coverHeight = (effects.coverRatio ?? 0) * PERCENTAGE_MAX;
 
