@@ -388,7 +388,7 @@ const ChatScreen = () => {
   const displayName = conversation?.otherUser?.name || matchName;
   const displayInitial = displayName?.[0]?.toUpperCase() || '?';
   const revealLevel = conversation?.revealLevel ?? 0;
-  const candidatePhoto = conversation?.otherUser?.photoUrl || matchPhotoUrl || null;
+  const candidatePhoto = (conversation?.otherUser?.photoUrl ?? matchPhotoUrl) ?? null;
 
   if (isLoading) {
     return (
