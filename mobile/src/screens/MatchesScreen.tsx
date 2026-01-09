@@ -7,9 +7,6 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Image,
-  Platform,
-  ImageStyle,
 } from 'react-native';
 import { useNavigation, useFocusEffect, CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,7 +17,8 @@ import { AppStackParamList, TabParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import { getConversationReadCounts, ReadCounts } from '../services/unreadStorage';
-import { getPhotoEffects, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
+import RevealPhoto from '../components/RevealPhoto';
+import { getRevealChapter } from '../utils/reveal';
 
 type NavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<AppStackParamList>,
@@ -154,37 +152,23 @@ const MatchesScreen = () => {
       ? `${matchedUser.age ?? 'N/A'} • ${matchedUser.city ?? 'Inconnue'}`
       : 'Détails indisponibles';
     const revealLevel = item.conversation?.revealLevel ?? 0;
-    const candidatePhoto = matchedUser?.photoUrl || undefined;
-    const photoHidden = shouldHidePhoto(revealLevel, matchedUser?.photoHidden, candidatePhoto);
-    const photoUri = !photoHidden ? candidatePhoto : undefined;
-    const effects = getPhotoEffects(revealLevel);
+    const photoUrl = matchedUser?.photoUrl || undefined;
     const unreadCount = getUnreadCount(item);
     return (
       <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
         <View style={styles.matchInfo}>
-          {photoUri ? (
-            <View style={styles.avatarWrapper}>
-              <Image
-                source={{ uri: photoUri }}
-                style={[styles.avatar, effects.grayscale && styles.grayscaleImage]}
-                blurRadius={effects.blurRadius}
-              />
-              {(effects.overlayOpacity > 0 || effects.grayscale) && (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.avatarOverlay,
-                    effects.grayscale && styles.avatarOverlayMuted,
-                    { opacity: effects.overlayOpacity },
-                  ]}
-                />
-              )}
-            </View>
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarPlaceholderText}>?</Text>
-            </View>
-          )}
+          <RevealPhoto
+            photoUrl={photoUrl}
+            photoHidden={matchedUser?.photoHidden}
+            revealLevel={revealLevel}
+            containerStyle={styles.avatarWrapper}
+            borderRadius={32}
+            placeholder={
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarPlaceholderText}>?</Text>
+              </View>
+            }
+          />
           <View style={styles.matchTextArea}>
             <View style={styles.nameRow}>
               <Text style={styles.matchName}>{displayName}</Text>
@@ -293,16 +277,16 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     overflow: 'hidden',
     position: 'relative',
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
     backgroundColor: Colors.bgSecondary,
     borderWidth: 1,
     borderColor: Colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarPlaceholder: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -310,17 +294,6 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontFamily: Typography.fontSans,
     fontWeight: '700',
-  },
-  grayscaleImage: {
-    ...(Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as unknown as ImageStyle) : {}),
-  },
-  avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.bgPrimary,
-    borderRadius: 32,
-  },
-  avatarOverlayMuted: {
-    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   nameRow: {
     flexDirection: 'row',
