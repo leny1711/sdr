@@ -17,8 +17,12 @@ export const computeChapterFromMessageCount = (messageCount: number): ChapterNum
   return 0;
 };
 
-export const computeRevealLevel = (textMessageCount: number): RevealLevel =>
-  computeChapterFromMessageCount(textMessageCount);
+export const computeRevealLevel = (textMessageCount: number): RevealLevel => {
+  if (textMessageCount >= 50) return 3;
+  if (textMessageCount >= 25) return 2;
+  if (textMessageCount >= 10) return 1;
+  return 0;
+};
 
 export const applyRevealToUser = <T extends WithPhoto>(user: T, revealLevel: number) => {
   const normalizedPhoto = normalizePhotoUrl(user.photoUrl);
