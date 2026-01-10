@@ -43,6 +43,8 @@ export class MessageService {
         throw new Error('Unauthorized access to conversation');
       }
 
+      const previousTextMessageCount = conversation.textMessageCount;
+
       const message = await tx.message.create({
         data: {
           conversationId,
@@ -75,8 +77,6 @@ export class MessageService {
       });
 
       const newTextMessageCount = updatedConversation.textMessageCount;
-      const previousTextMessageCount = Math.max(0, newTextMessageCount - 1);
-
       const previousRevealLevel = computeRevealLevel(previousTextMessageCount);
       const nextRevealLevel = computeRevealLevel(newTextMessageCount);
       const chapter = getChapterFromLevel(nextRevealLevel);

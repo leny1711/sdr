@@ -31,9 +31,11 @@ export const rateLimiter = (req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
+  store[identifier].count++;
+
   res.once('finish', () => {
-    if (res.statusCode < 400) {
-      store[identifier].count++;
+    if (res.statusCode >= 400 && store[identifier]) {
+      store[identifier].count = Math.max(0, store[identifier].count - 1);
     }
   });
 
