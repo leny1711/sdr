@@ -18,7 +18,7 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import { getConversationReadCounts, ReadCounts } from '../services/unreadStorage';
 import RevealPhoto from '../components/RevealPhoto';
-import { getRevealChapter } from '../utils/reveal';
+import { calculateRevealLevel, getRevealChapter } from '../utils/reveal';
 
 type NavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<AppStackParamList>,
@@ -151,7 +151,8 @@ const MatchesScreen = () => {
     const displayDetails = matchedUser
       ? `${matchedUser.age ?? 'N/A'} • ${matchedUser.city ?? 'Inconnue'}`
       : 'Détails indisponibles';
-    const revealLevel = item.conversation?.revealLevel ?? 0;
+    const persistedCount = item.conversation?.textMessageCount ?? 0;
+    const revealLevel = item.conversation?.revealLevel ?? calculateRevealLevel(persistedCount);
     const photoUrl = matchedUser?.photoUrl || undefined;
     const unreadCount = getUnreadCount(item);
     return (
