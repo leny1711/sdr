@@ -8,6 +8,7 @@ import { AppStackParamList } from '../navigation';
 import { getRevealChapter } from '../utils/reveal';
 import apiService from '../services/api';
 import socketService from '../services/socket';
+import { Message, MessageEnvelope } from '../types';
 
 type MatchProfileRouteProp = RouteProp<AppStackParamList, 'MatchProfile'>;
 
@@ -43,10 +44,10 @@ const MatchProfileScreen = () => {
 
   useEffect(() => {
     if (!conversationId) return;
-    const handleIncoming = (payload: any) => {
-      const incoming = payload?.message ? payload.message : payload;
+    const handleIncoming = (payload: MessageEnvelope | { message: Message } | Message) => {
+      const incoming = 'message' in payload ? payload.message : payload;
       if (incoming?.conversationId !== conversationId) return;
-      if (payload?.revealLevel !== undefined) {
+      if ('revealLevel' in payload && payload.revealLevel !== undefined) {
         setRevealLevel(payload.revealLevel);
       }
     };

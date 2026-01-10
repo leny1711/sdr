@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import apiService from '../services/api';
 import socketService from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
-import { Message, Conversation } from '../types';
+import { Message, Conversation, MessageEnvelope } from '../types';
 import { AppStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
@@ -126,11 +126,12 @@ const ChatScreen = () => {
   );
 
   const applyIncomingPayload = useCallback(
-    (payload: any) => {
-      const incomingMessage: Message = payload?.message ? payload.message : payload;
-      const incomingSystem: Message | undefined = payload?.systemMessage;
-      const incomingRevealLevel: number | undefined = payload?.revealLevel;
-      const incomingCount: number | undefined = payload?.textMessageCount;
+    (payload: MessageEnvelope | { message: Message } | Message) => {
+      const incomingMessage: Message = 'message' in payload ? payload.message : payload;
+      const incomingSystem: Message | undefined = 'systemMessage' in payload ? payload.systemMessage : undefined;
+      const incomingRevealLevel: number | undefined = 'revealLevel' in payload ? payload.revealLevel : undefined;
+      const incomingCount: number | undefined =
+        'textMessageCount' in payload ? payload.textMessageCount : undefined;
 
       setMessages((prev) => {
         const withoutTemp = prev.filter(
@@ -216,7 +217,8 @@ const ChatScreen = () => {
     socketService.joinConversation(conversationId);
 
     // Listen for new messages
-    const handleNewMessage = (payload: any) => applyIncomingPayload(payload);
+    const handleNewMessage = (payload: MessageEnvelope | { message: Message } | Message) =>
+      applyIncomingPayload(payload);
 
     // Listen for typing
     const handleTyping = (data: { userId: string; isTyping: boolean }) => {

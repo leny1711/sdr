@@ -63,7 +63,7 @@ class SocketService {
   }
 
   // Remove message listener
-  offNewMessage(callback?: (payload: any) => void) {
+  offNewMessage(callback?: (payload: MessageEnvelope | { message: Message } | Message) => void) {
     if (callback) {
       this.socket?.off('message:new', callback);
     } else {
