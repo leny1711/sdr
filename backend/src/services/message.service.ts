@@ -1,28 +1,12 @@
 import prisma from '../config/database';
 import { MessageType } from '@prisma/client';
-import { ChapterNumber, MessageEnvelope, SystemMessagePayload } from '../types';
-import { computeChapterFromMessageCount, computeRevealLevel, getChapterSystemLabel } from '../utils/reveal.utils';
-
-const buildSystemMessage = (
-  conversationId: string,
-  chapter: ChapterNumber,
-  createdAt: Date,
-  senderId: string
-): SystemMessagePayload => {
-  const systemDate = new Date(createdAt.getTime() + 1);
-  const timestamp = systemDate.getTime();
-  return {
-    id: `system-${conversationId}-${chapter}-${timestamp}`,
-    conversationId,
-    senderId,
-    type: 'SYSTEM',
-    content: getChapterSystemLabel(chapter),
-    createdAt: systemDate.toISOString(),
-  };
-};
+import { ChapterNumber, MessageEnvelope, RevealLevel, SystemMessagePayload } from '../types';
+import { computeRevealLevel, getChapterSystemLabel } from '../utils/reveal.utils';
 
 export class MessageService {
   private static conversationLocks = new Map<string, Promise<void>>();
+  private static lastMessageTimestamps = new Map<string, number>();
+  private static readonly MIN_MESSAGE_INTERVAL_MS = 400;
 
   private static async withConversationLock<T>(conversationId: string, task: () => Promise<T>): Promise<T> {
     const previous = this.conversationLocks.get(conversationId) ?? Promise.resolve();
@@ -43,8 +27,19 @@ export class MessageService {
     }
   }
 
+  private static async enforceRateLimit(conversationId: string) {
+    const now = Date.now();
+    const last = this.lastMessageTimestamps.get(conversationId) ?? 0;
+    const delta = now - last;
+    if (delta < this.MIN_MESSAGE_INTERVAL_MS) {
+      await new Promise((resolve) => setTimeout(resolve, this.MIN_MESSAGE_INTERVAL_MS - delta));
+    }
+    this.lastMessageTimestamps.set(conversationId, Date.now());
+  }
+
   static async sendTextMessage(conversationId: string, senderId: string, content: string): Promise<MessageEnvelope> {
     return this.withConversationLock(conversationId, async () => {
+      await this.enforceRateLimit(conversationId);
       const result = await prisma.$transaction(async (tx) => {
         const conversation = await tx.conversation.findUnique({
           where: { id: conversationId },
@@ -53,6 +48,11 @@ export class MessageService {
             user1Id: true,
             user2Id: true,
             textMessageCount: true,
+            revealLevel: true,
+            chapter1UnlockedAt: true,
+            chapter2UnlockedAt: true,
+            chapter3UnlockedAt: true,
+            chapter4UnlockedAt: true,
           },
         });
 
@@ -66,9 +66,11 @@ export class MessageService {
 
         const currentCount = conversation.textMessageCount;
         const nextTextCount = currentCount + 1;
-        const previousChapter = computeChapterFromMessageCount(currentCount);
-        const nextChapter = computeChapterFromMessageCount(nextTextCount);
-        const chapterChanged = nextChapter !== previousChapter;
+        const previousReveal = conversation.revealLevel ?? computeRevealLevel(currentCount);
+        const computedReveal = computeRevealLevel(nextTextCount);
+        const nextRevealLevel = Math.max(previousReveal, computedReveal) as ChapterNumber;
+        const chapterChanged = nextRevealLevel !== previousReveal;
+        const newlyUnlocked: ChapterNumber[] = [];
 
         const message = await tx.message.create({
           data: {
@@ -87,33 +89,84 @@ export class MessageService {
           },
         });
 
+        const conversationUpdateData: any = {
+          textMessageCount: {
+            increment: 1,
+          },
+          revealLevel: nextRevealLevel,
+          updatedAt: new Date(),
+        };
+
+        if (nextRevealLevel > previousReveal) {
+          const unlockTime = new Date(message.createdAt.getTime() + 1);
+          for (let level = previousReveal + 1; level <= nextRevealLevel; level++) {
+            const key = `chapter${level}UnlockedAt` as keyof typeof conversation;
+            if (!conversation[key]) {
+              conversationUpdateData[key] = unlockTime;
+              newlyUnlocked.push(level as ChapterNumber);
+            }
+          }
+        }
+
         const updatedConversation = await tx.conversation.update({
           where: { id: conversationId },
-          data: {
-            textMessageCount: {
-              increment: 1,
-            },
-            updatedAt: new Date(),
-          },
+          data: conversationUpdateData,
           select: {
             textMessageCount: true,
+            revealLevel: true,
+            chapter1UnlockedAt: true,
+            chapter2UnlockedAt: true,
+            chapter3UnlockedAt: true,
+            chapter4UnlockedAt: true,
+            user1Id: true,
+            user2Id: true,
           },
         });
 
-        const finalRevealLevel = computeRevealLevel(updatedConversation.textMessageCount);
-        const finalChapter = computeChapterFromMessageCount(updatedConversation.textMessageCount);
+        const unlockChapter = newlyUnlocked[newlyUnlocked.length - 1] ?? (chapterChanged ? nextRevealLevel : undefined);
+        const systemMessage = unlockChapter
+          ? await tx.message.create({
+              data: {
+                conversationId,
+                senderId: conversation.user1Id,
+                type: MessageType.SYSTEM,
+                content: getChapterSystemLabel(unlockChapter),
+                createdAt: new Date(message.createdAt.getTime() + 1),
+              },
+              include: {
+                sender: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            })
+          : undefined;
 
-        const systemMessage = chapterChanged
-          ? buildSystemMessage(conversationId, finalChapter, message.createdAt, conversation.user1Id)
+        const finalRevealLevel = (updatedConversation.revealLevel ?? nextRevealLevel) as RevealLevel;
+
+        const normalizedSystemMessage: SystemMessagePayload | undefined = systemMessage
+          ? {
+              id: systemMessage.id,
+              conversationId,
+              senderId: systemMessage.senderId,
+              type: 'SYSTEM',
+              content: systemMessage.content ?? getChapterSystemLabel(unlockChapter!),
+              createdAt:
+                systemMessage.createdAt instanceof Date
+                  ? systemMessage.createdAt.toISOString()
+                  : systemMessage.createdAt,
+            }
           : undefined;
 
         return {
           message,
           revealLevel: finalRevealLevel,
           textMessageCount: updatedConversation.textMessageCount,
-          chapter: finalChapter,
+          chapter: nextRevealLevel,
           chapterChanged,
-          systemMessage,
+          systemMessage: normalizedSystemMessage,
         };
       });
 

@@ -76,6 +76,10 @@ model Conversation {
   user2Id        String
   textMessageCount Int     @default(0)
   revealLevel    Int       @default(0)
+  chapter1UnlockedAt DateTime?
+  chapter2UnlockedAt DateTime?
+  chapter3UnlockedAt DateTime?
+  chapter4UnlockedAt DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -92,6 +96,7 @@ model Conversation {
 enum MessageType {
   TEXT
   VOICE
+  SYSTEM
 }
 
 model Message {

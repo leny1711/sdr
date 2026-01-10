@@ -3,7 +3,7 @@ export interface JWTPayload {
   email: string;
 }
 
-export type RevealLevel = 0 | 1 | 2 | 3;
+export type RevealLevel = 0 | 1 | 2 | 3 | 4;
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -12,7 +12,7 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
-export type ChapterNumber = 0 | 1 | 2 | 3;
+export type ChapterNumber = 0 | 1 | 2 | 3 | 4;
 
 export interface SystemMessagePayload {
   id: string;
