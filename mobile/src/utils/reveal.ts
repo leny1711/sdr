@@ -46,14 +46,14 @@ export const getPhotoEffects = (level: number) => {
   const grayscale = clampedLevel <= 1;
 
   if (clampedLevel === 0) {
-    return { blurRadius: 28, grayscale, overlayOpacity: 0.48, imageOpacity: 0.35, coverRatio: 0.3 };
+    return { blurRadius: 30, grayscale, overlayOpacity: 0.6, imageOpacity: 0.3 };
   }
 
-  if (clampedLevel === 1) return { blurRadius: 20, grayscale, overlayOpacity: 0.32, imageOpacity: 0.55, coverRatio: 0.18 };
-  if (clampedLevel === 2) return { blurRadius: 12, grayscale: false, overlayOpacity: 0.18, imageOpacity: 0.7, coverRatio: 0.08 };
-  if (clampedLevel === 3) return { blurRadius: 7, grayscale: false, overlayOpacity: 0.08, imageOpacity: 0.85, coverRatio: 0 };
+  if (clampedLevel === 1) return { blurRadius: 18, grayscale, overlayOpacity: 0.35, imageOpacity: 0.55 };
+  if (clampedLevel === 2) return { blurRadius: 8, grayscale: false, overlayOpacity: 0.15, imageOpacity: 0.82 };
+  if (clampedLevel === 3) return { blurRadius: 0, grayscale: false, overlayOpacity: 0, imageOpacity: 1 };
 
-  return { blurRadius: 0, grayscale: false, overlayOpacity: 0, imageOpacity: 1, coverRatio: 0 };
+  return { blurRadius: 0, grayscale: false, overlayOpacity: 0, imageOpacity: 1 };
 };
 
 export const getChapterNarrative = (level: number): string => {
