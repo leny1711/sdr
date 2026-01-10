@@ -26,6 +26,13 @@ export class MessageService {
     const result = await prisma.$transaction(async (tx) => {
       const conversation = await tx.conversation.findUnique({
         where: { id: conversationId },
+        select: {
+          id: true,
+          user1Id: true,
+          user2Id: true,
+          textMessageCount: true,
+          revealLevel: true,
+        },
       });
 
       if (!conversation) {
@@ -35,13 +42,6 @@ export class MessageService {
       if (conversation.user1Id !== senderId && conversation.user2Id !== senderId) {
         throw new Error('Unauthorized access to conversation');
       }
-
-      const previousCount = conversation.textMessageCount;
-      const previousRevealLevel = computeRevealLevel(previousCount);
-      const newTextMessageCount = previousCount + 1;
-      const nextRevealLevel = computeRevealLevel(newTextMessageCount);
-      const chapter = getChapterFromLevel(nextRevealLevel);
-      const chapterChanged = nextRevealLevel !== previousRevealLevel;
 
       const message = await tx.message.create({
         data: {
@@ -60,14 +60,33 @@ export class MessageService {
         },
       });
 
-      await tx.conversation.update({
+      const updatedConversation = await tx.conversation.update({
         where: { id: conversationId },
         data: {
-          textMessageCount: newTextMessageCount,
-          revealLevel: nextRevealLevel,
+          textMessageCount: {
+            increment: 1,
+          },
           updatedAt: new Date(),
         },
+        select: {
+          textMessageCount: true,
+          revealLevel: true,
+        },
       });
+
+      const updatedRevealLevel = computeRevealLevel(updatedConversation.textMessageCount);
+      const chapterChanged = updatedRevealLevel > updatedConversation.revealLevel;
+
+      if (chapterChanged) {
+        await tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            revealLevel: updatedRevealLevel,
+          },
+        });
+      }
+
+      const chapter = getChapterFromLevel(updatedRevealLevel);
 
       const systemMessage = chapterChanged
         ? buildSystemMessage(conversationId, chapter, message.createdAt, conversation.user1Id)
@@ -75,8 +94,8 @@ export class MessageService {
 
       return {
         message,
-        revealLevel: nextRevealLevel,
-        textMessageCount: newTextMessageCount,
+        revealLevel: updatedRevealLevel,
+        textMessageCount: updatedConversation.textMessageCount,
         chapter,
         chapterChanged,
         systemMessage,
