@@ -9,7 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Colors } from '../constants/theme';
-import { getPhotoEffects, shouldHidePhoto } from '../utils/reveal';
+import { getPhotoEffects } from '../utils/reveal';
 
 type RevealPhotoProps = {
   photoUrl?: string | null;
@@ -21,7 +21,7 @@ type RevealPhotoProps = {
   placeholder?: React.ReactNode;
 };
 
-const GRAYSCALE_TINT = '#c8c8c8';
+const GRAYSCALE_OVERLAY_COLOR = 'rgba(0,0,0,0.32)';
 const MUTED_OVERLAY_COLOR = 'rgba(0,0,0,0.25)';
 const COVER_OPACITY = 0.32;
 const HIDDEN_PHOTO_OVERLAY_BOOST = 0.1;
@@ -44,16 +44,8 @@ const RevealPhoto = ({
     setLoadError(false);
   }, [photoUrl]);
 
-  const hidden = shouldHidePhoto(revealLevel, photoUrl) || loadError;
+  const hasPhoto = !!photoUrl && !loadError;
   const radiusStyle = borderRadius !== undefined ? { borderRadius } : undefined;
-
-  if (hidden || !photoUrl) {
-    return (
-      <View style={[styles.container, radiusStyle, containerStyle]}>
-        {placeholder || <View style={[styles.placeholder, radiusStyle]} />}
-      </View>
-    );
-  }
 
   const effects = getPhotoEffects(revealLevel);
   const boostedOverlayOpacity = effects.overlayOpacity + calculateOverlayBoost(_photoHidden, revealLevel);
@@ -62,43 +54,49 @@ const RevealPhoto = ({
 
   return (
     <View style={[styles.container, radiusStyle, containerStyle]}>
-      <Image
-        source={{ uri: photoUrl }}
-        style={[
-          styles.image,
-          radiusStyle,
-          effects.grayscale
-            ? Platform.OS === 'web'
-              ? styles.grayscaleImageWeb
-              : styles.grayscaleImageNative
-            : undefined,
-          imageStyle,
-        ]}
-        blurRadius={effects.blurRadius}
-        onError={() => setLoadError(true)}
-      />
-      {effects.coverRatio && effects.coverRatio > 0 && (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.cover,
-            radiusStyle,
-            {
-              height: `${coverHeight}%`,
-            },
-          ]}
-        />
-      )}
-      {(overlayOpacity > 0 || effects.grayscale) && (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.overlay,
-            radiusStyle,
-            effects.grayscale && styles.overlayMuted,
-            { opacity: overlayOpacity },
-          ]}
-        />
+      {hasPhoto ? (
+        <>
+          <Image
+            source={{ uri: photoUrl! }}
+            style={[
+              styles.image,
+              radiusStyle,
+              effects.grayscale && Platform.OS === 'web' ? styles.grayscaleImageWeb : undefined,
+              imageStyle,
+              effects.imageOpacity !== undefined ? { opacity: effects.imageOpacity } : undefined,
+            ]}
+            blurRadius={effects.blurRadius}
+            onError={() => setLoadError(true)}
+          />
+          {effects.grayscale && Platform.OS !== 'web' && (
+            <View pointerEvents="none" style={[styles.grayscaleTint, radiusStyle]} />
+          )}
+          {effects.coverRatio && effects.coverRatio > 0 && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.cover,
+                radiusStyle,
+                {
+                  height: `${coverHeight}%`,
+                },
+              ]}
+            />
+          )}
+          {(overlayOpacity > 0 || effects.grayscale) && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.overlay,
+                radiusStyle,
+                effects.grayscale && styles.overlayMuted,
+                { opacity: overlayOpacity },
+              ]}
+            />
+          )}
+        </>
+      ) : (
+        placeholder || <View style={[styles.placeholder, radiusStyle]} />
       )}
     </View>
   );
@@ -121,17 +119,16 @@ const styles = StyleSheet.create({
   grayscaleImageWeb: {
     ...(Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as unknown as ImageStyle) : {}),
   },
-  grayscaleImageNative: {
-    ...(Platform.OS !== 'web'
-      ? ({ tintColor: GRAYSCALE_TINT, opacity: 0.9 } as ImageStyle)
-      : {}),
-  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: Colors.bgPrimary,
   },
   overlayMuted: {
     backgroundColor: MUTED_OVERLAY_COLOR,
+  },
+  grayscaleTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: GRAYSCALE_OVERLAY_COLOR,
   },
   cover: {
     ...StyleSheet.absoluteFillObject,

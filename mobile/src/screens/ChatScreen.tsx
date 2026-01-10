@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,12 +23,7 @@ import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import { markConversationAsRead } from '../services/unreadStorage';
 import RevealPhoto from '../components/RevealPhoto';
-import {
-  calculateRevealLevel,
-  getChapterNarrative,
-  getRevealChapter,
-  shouldHidePhoto,
-} from '../utils/reveal';
+import { deriveRevealProgress, getChapterNarrative, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 const conversationUnavailableMessage = 'Cette conversation est indisponible.';
@@ -100,6 +95,44 @@ const ChatScreen = () => {
     [messageTimestampCache]
   );
 
+  const applyConversationProgress = useCallback(
+    (existing: Conversation | null, updatedMessages: Message[], incomingRevealLevel?: number) => {
+      if (!existing) return existing;
+
+      const baseRevealLevel = incomingRevealLevel ?? existing.revealLevel;
+      const { revealLevel, textMessageCount } = deriveRevealProgress(
+        baseRevealLevel !== undefined ? { ...existing, revealLevel: baseRevealLevel } : existing,
+        updatedMessages
+      );
+      const effectiveLevel = Math.max(revealLevel, baseRevealLevel ?? 0);
+      const candidatePhoto = existing.otherUser?.photoUrl ?? matchPhotoUrl ?? null;
+      const nextPhotoHidden = shouldHidePhoto(effectiveLevel, candidatePhoto);
+
+      if (
+        existing.textMessageCount === textMessageCount &&
+        (existing.revealLevel ?? 0) === effectiveLevel &&
+        existing.otherUser?.photoHidden === nextPhotoHidden
+      ) {
+        return existing;
+      }
+
+      return {
+        ...existing,
+        textMessageCount,
+        revealLevel: effectiveLevel,
+        otherUser: existing.otherUser
+          ? { ...existing.otherUser, photoHidden: nextPhotoHidden }
+          : existing.otherUser,
+      };
+    },
+    [matchPhotoUrl]
+  );
+
+  const revealProgress = useMemo(
+    () => deriveRevealProgress(conversation, messages),
+    [conversation, messages]
+  );
+
   const triggerSendFeedback = () => {
     sendFeedbackAnim.setValue(0);
     Animated.sequence([
@@ -132,7 +165,7 @@ const ChatScreen = () => {
 
     navigation.navigate('MatchProfile', {
       user: conversation.otherUser,
-      revealLevel: conversation.revealLevel ?? 0,
+      revealLevel: revealProgress.revealLevel ?? 0,
     });
   };
 
@@ -153,31 +186,13 @@ const ChatScreen = () => {
       const incomingMessage = (payload as any).message ? (payload as any).message : (payload as Message);
       const incomingRevealLevel = (payload as any).revealLevel as number | undefined;
 
-      setMessages((prev) => dedupeMessages([...prev, incomingMessage]));
-      // Update conversation message count
-      if (incomingMessage.type === 'TEXT') {
-        setConversation((prev) => {
-          if (!prev) return prev;
-          const updatedCount = prev.textMessageCount + 1;
-          const newRevealLevel =
-            typeof incomingRevealLevel === 'number'
-              ? incomingRevealLevel
-              : calculateRevealLevel(updatedCount);
-          const candidatePhoto = prev.otherUser?.photoUrl || matchPhotoUrl || null;
-          return {
-            ...prev,
-            textMessageCount: updatedCount,
-            revealLevel: newRevealLevel,
-            otherUser: prev.otherUser
-              ? {
-                  ...prev.otherUser,
-                  // Ignore previously persisted hidden flag so reveal level can progressively unmask the photo
-                  photoHidden: shouldHidePhoto(newRevealLevel, candidatePhoto),
-                }
-              : prev.otherUser,
-          };
-        });
-      }
+      setMessages((prev) => {
+        const updatedMessages = dedupeMessages([...prev, incomingMessage]);
+        setConversation((prevConversation) =>
+          applyConversationProgress(prevConversation, updatedMessages, incomingRevealLevel)
+        );
+        return updatedMessages;
+      });
     };
 
     // Listen for typing
@@ -197,7 +212,7 @@ const ChatScreen = () => {
       socketService.offNewMessage(handleNewMessage);
       socketService.offUserTyping(handleTyping);
     };
-  }, [conversationId, user?.id, dedupeMessages]);
+  }, [conversationId, user?.id, dedupeMessages, applyConversationProgress]);
 
   const loadConversation = async () => {
     if (!conversationId) return;
@@ -216,7 +231,9 @@ const ChatScreen = () => {
       const data = await apiService.getMessages(conversationId);
       // Add guard to ensure data is an array
       if (Array.isArray(data)) {
-        setMessages(dedupeMessages(data));
+        const deduped = dedupeMessages(data);
+        setMessages(deduped);
+        setConversation((prev) => applyConversationProgress(prev, deduped));
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
@@ -255,7 +272,11 @@ const ChatScreen = () => {
     };
 
     // Add message to local state immediately
-    setMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
+    setMessages((prev) => {
+      const updated = dedupeMessages([...prev, optimisticMessage]);
+      setConversation((prevConversation) => applyConversationProgress(prevConversation, updated));
+      return updated;
+    });
 
     try {
       await apiService.sendTextMessage({
@@ -296,17 +317,21 @@ const ChatScreen = () => {
   };
 
   useEffect(() => {
+    setConversation((prev) => applyConversationProgress(prev, messages));
+  }, [messages, applyConversationProgress, conversation?.id]);
+
+  useEffect(() => {
     if (!conversation?.id || !isFocused) return;
-    if (lastPersistedCount.current === conversation.textMessageCount) return;
+    if (lastPersistedCount.current === revealProgress.textMessageCount) return;
     const timeout = setTimeout(() => {
-      lastPersistedCount.current = conversation.textMessageCount;
-      markConversationAsRead(conversation.id, conversation.textMessageCount).catch((error) =>
+      lastPersistedCount.current = revealProgress.textMessageCount;
+      markConversationAsRead(conversation.id, revealProgress.textMessageCount).catch((error) =>
         console.error('Failed to persist read state', error)
       );
     }, 800);
 
     return () => clearTimeout(timeout);
-  }, [conversation?.id, conversation?.textMessageCount, isFocused]);
+  }, [conversation?.id, revealProgress.textMessageCount, isFocused]);
 
   const sendButtonScale = sendFeedbackAnim.interpolate({
     inputRange: [0, 1],
@@ -321,7 +346,7 @@ const ChatScreen = () => {
   useEffect(() => {
     if (!conversation) return;
     const previousLevel = lastRevealLevelRef.current;
-    const currentLevel = conversation.revealLevel ?? 0;
+    const currentLevel = revealProgress.revealLevel ?? 0;
     if (conversation.otherUser?.photoUrl) {
       photoUnavailableRef.current = false;
     }
@@ -343,16 +368,11 @@ const ChatScreen = () => {
       ]).start(() => setUnlockedChapter(null));
     }
     lastRevealLevelRef.current = currentLevel;
-  }, [conversation]);
+  }, [conversation, revealProgress.revealLevel]);
 
   useEffect(() => {
     if (!conversation?.id) return;
-    if (
-      conversation.revealLevel > 0 &&
-      !conversation.otherUser?.photoUrl &&
-      !photoRefreshRef.current &&
-      !photoUnavailableRef.current
-    ) {
+    if (revealProgress.revealLevel > 0 && !conversation.otherUser?.photoUrl && !photoRefreshRef.current && !photoUnavailableRef.current) {
       photoRefreshRef.current = true;
       apiService
         .getConversation(conversation.id)
@@ -367,7 +387,7 @@ const ChatScreen = () => {
           photoRefreshRef.current = false;
         });
     }
-  }, [conversation?.id, conversation?.otherUser?.photoHidden, conversation?.otherUser?.photoUrl, conversation?.revealLevel]);
+  }, [conversation?.id, conversation?.otherUser?.photoUrl, revealProgress.revealLevel]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwnMessage = item.senderId === user?.id;
@@ -393,8 +413,12 @@ const ChatScreen = () => {
 
   const displayName = conversation?.otherUser?.name || matchName;
   const displayInitial = displayName?.[0]?.toUpperCase() || '?';
-  const revealLevel = conversation?.revealLevel ?? 0;
-  const candidatePhoto = (conversation?.otherUser?.photoUrl ?? matchPhotoUrl) ?? null;
+  const candidatePhoto = useMemo(
+    () => (conversation?.otherUser?.photoUrl ?? matchPhotoUrl) ?? null,
+    [conversation?.otherUser?.photoUrl, matchPhotoUrl]
+  );
+  const revealLevel = revealProgress.revealLevel ?? 0;
+  const photoHidden = shouldHidePhoto(revealLevel, candidatePhoto);
 
   if (isLoading) {
     return (
@@ -422,7 +446,7 @@ const ChatScreen = () => {
           >
             <RevealPhoto
               photoUrl={candidatePhoto || undefined}
-              photoHidden={conversation?.otherUser?.photoHidden}
+              photoHidden={photoHidden}
               revealLevel={revealLevel}
               containerStyle={styles.photoWrapper}
               borderRadius={24}
@@ -437,7 +461,7 @@ const ChatScreen = () => {
               {conversation && (
                 <View style={styles.revealInfo}>
                   <Text style={styles.revealText}>
-                    {getRevealChapter(conversation.revealLevel)}
+                    {getRevealChapter(revealLevel)}
                   </Text>
                 </View>
               )}
