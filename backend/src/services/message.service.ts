@@ -26,7 +26,7 @@ export class MessageService {
 
   private static async withConversationLock<T>(conversationId: string, task: () => Promise<T>): Promise<T> {
     const previous = this.conversationLocks.get(conversationId) ?? Promise.resolve();
-    let release!: () => void;
+    let release: () => void = () => {};
     const current = new Promise<void>((resolve) => {
       release = resolve;
     });
