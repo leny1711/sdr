@@ -42,7 +42,7 @@ export interface Message {
   id: string;
   conversationId: string;
   senderId: string;
-  type: 'TEXT' | 'VOICE';
+  type: 'TEXT' | 'VOICE' | 'SYSTEM';
   content: string;
   voiceUrl?: string | null;
   createdAt: string;

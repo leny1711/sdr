@@ -390,6 +390,14 @@ const ChatScreen = () => {
   }, [conversation?.id, conversation?.otherUser?.photoUrl, revealProgress.revealLevel]);
 
   const renderMessage = ({ item }: { item: Message }) => {
+    if (item.type === 'SYSTEM') {
+      return (
+        <View style={styles.systemMessageContainer}>
+          <Text style={styles.systemMessageText}>{item.content || ''}</Text>
+        </View>
+      );
+    }
+
     const isOwnMessage = item.senderId === user?.id;
     return (
       <View
@@ -399,7 +407,7 @@ const ChatScreen = () => {
         ]}
       >
         <Text style={[styles.messageText, isOwnMessage && styles.ownMessageText]}>
-          {item.content}
+          {item.content || ''}
         </Text>
         <Text style={[styles.messageTime, isOwnMessage && styles.ownMessageTime]}>
           {new Date(item.createdAt).toLocaleTimeString([], {
@@ -604,6 +612,23 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     padding: Spacing.lg,
+  },
+  systemMessageContainer: {
+    alignSelf: 'center',
+    backgroundColor: Colors.bgSecondary,
+    borderColor: Colors.borderLight,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.sm,
+    maxWidth: '85%',
+  },
+  systemMessageText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontSans,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   messageContainer: {
     maxWidth: '75%',

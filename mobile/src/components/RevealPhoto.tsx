@@ -23,9 +23,7 @@ type RevealPhotoProps = {
 
 const GRAYSCALE_OVERLAY_COLOR = 'rgba(0,0,0,0.32)';
 const MUTED_OVERLAY_COLOR = 'rgba(0,0,0,0.25)';
-const COVER_OPACITY = 0.32;
 const HIDDEN_PHOTO_OVERLAY_BOOST = 0.1;
-const PERCENTAGE_MAX = 100;
 
 const calculateOverlayBoost = (photoHidden: boolean, revealLevel: number) =>
   photoHidden && revealLevel <= 1 ? HIDDEN_PHOTO_OVERLAY_BOOST : 0;
@@ -50,7 +48,6 @@ const RevealPhoto = ({
   const effects = getPhotoEffects(revealLevel);
   const boostedOverlayOpacity = effects.overlayOpacity + calculateOverlayBoost(_photoHidden, revealLevel);
   const overlayOpacity = Math.min(1, boostedOverlayOpacity);
-  const coverHeight = (effects.coverRatio ?? 0) * PERCENTAGE_MAX;
 
   return (
     <View style={[styles.container, radiusStyle, containerStyle]}>
@@ -70,18 +67,6 @@ const RevealPhoto = ({
           />
           {effects.grayscale && Platform.OS !== 'web' && (
             <View pointerEvents="none" style={[styles.grayscaleTint, radiusStyle]} />
-          )}
-          {effects.coverRatio && effects.coverRatio > 0 && (
-            <View
-              pointerEvents="none"
-              style={[
-                styles.cover,
-                radiusStyle,
-                {
-                  height: `${coverHeight}%`,
-                },
-              ]}
-            />
           )}
           {(overlayOpacity > 0 || effects.grayscale) && (
             <View
@@ -121,7 +106,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: '#000',
   },
   overlayMuted: {
     backgroundColor: MUTED_OVERLAY_COLOR,
@@ -129,12 +114,6 @@ const styles = StyleSheet.create({
   grayscaleTint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: GRAYSCALE_OVERLAY_COLOR,
-  },
-  cover: {
-    ...StyleSheet.absoluteFillObject,
-    bottom: undefined,
-    backgroundColor: Colors.bgPrimary,
-    opacity: COVER_OPACITY,
   },
   placeholder: {
     ...StyleSheet.absoluteFillObject,
