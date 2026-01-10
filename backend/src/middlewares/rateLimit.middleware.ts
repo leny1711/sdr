@@ -12,26 +12,30 @@ const store: RateLimitStore = {};
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_REQUESTS = 100;
 
-export const rateLimiter = (req: Request, res: Response, next: NextFunction) => {
+export const rateLimiter = (req: Request, res: Response, next: NextFunction): void => {
   const identifier = req.ip || 'unknown';
   const now = Date.now();
 
   if (!store[identifier] || now > store[identifier].resetTime) {
     store[identifier] = {
-      count: 1,
+      count: 0,
       resetTime: now + WINDOW_MS,
     };
-    return next();
   }
 
-  store[identifier].count++;
-
-  if (store[identifier].count > MAX_REQUESTS) {
-    return res.status(429).json({
+  if (store[identifier].count >= MAX_REQUESTS) {
+    res.status(429).json({
       success: false,
       error: 'Too many requests, please try again later',
     });
+    return;
   }
+
+  res.once('finish', () => {
+    if (res.statusCode < 400) {
+      store[identifier].count++;
+    }
+  });
 
   next();
 };
