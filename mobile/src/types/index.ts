@@ -49,6 +49,15 @@ export interface Message {
   sender?: User;
 }
 
+export interface MessageEnvelope {
+  message: Message;
+  revealLevel: number;
+  textMessageCount: number;
+  chapter: number;
+  chapterChanged: boolean;
+  systemMessage?: Message;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { MessageService } from '../services/message.service';
+import { io } from '../server';
 
 export class MessageController {
   static async sendTextMessage(req: AuthRequest, res: Response) {
@@ -9,6 +10,15 @@ export class MessageController {
       const { conversationId, content } = req.body;
 
       const result = await MessageService.sendTextMessage(conversationId, userId, content);
+
+      io.to(conversationId).emit('message:new', {
+        message: result.message,
+        revealLevel: result.revealLevel,
+        textMessageCount: result.textMessageCount,
+        chapter: result.chapter,
+        chapterChanged: result.chapterChanged,
+        systemMessage: result.systemMessage,
+      });
 
       return res.status(201).json({
         success: true,

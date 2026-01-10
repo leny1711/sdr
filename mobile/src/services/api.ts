@@ -9,6 +9,7 @@ import {
   Match,
   Conversation,
   Message,
+  MessageEnvelope,
   LikeRequest,
   MessageRequest,
 } from '../types';
@@ -122,8 +123,8 @@ class ApiService {
   }
 
   // Messages
-  async sendTextMessage(data: MessageRequest): Promise<Message> {
-    const response = await this.api.post<{ success: boolean; data: Message }>('/api/messages/text', data);
+  async sendTextMessage(data: MessageRequest): Promise<MessageEnvelope> {
+    const response = await this.api.post<{ success: boolean; data: MessageEnvelope }>('/api/messages/text', data);
     return response.data.data;
   }
 }
