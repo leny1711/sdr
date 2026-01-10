@@ -44,6 +44,6 @@ export const getChapterSystemLabel = (chapter: ChapterNumber) => {
     case 3:
       return 'Chapitre 3 — La connexion';
     default:
-      return 'Chapitre 4 — Révélation';
+      return 'Chapitre 3 — La connexion';
   }
 };

@@ -104,7 +104,7 @@ export class MessageService {
         const finalChapter = computeChapterFromMessageCount(updatedConversation.textMessageCount);
 
         const systemMessage = chapterChanged
-          ? buildSystemMessage(conversationId, nextChapter, message.createdAt, conversation.user1Id)
+          ? buildSystemMessage(conversationId, finalChapter, message.createdAt, conversation.user1Id)
           : undefined;
 
         return {
