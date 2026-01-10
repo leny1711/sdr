@@ -33,9 +33,6 @@ export const applyRevealToUser = <T extends WithPhoto>(user: T, revealLevel: num
   };
 };
 
-export const getChapterFromLevel = (revealLevel: number): ChapterNumber =>
-  Math.max(0, Math.min(4, Math.floor(revealLevel))) as ChapterNumber;
-
 export const getChapterSystemLabel = (chapter: number) => {
   switch (chapter) {
     case 0:
