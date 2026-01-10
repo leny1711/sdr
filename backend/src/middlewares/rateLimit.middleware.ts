@@ -23,7 +23,9 @@ export const rateLimiter = (req: Request, res: Response, next: NextFunction): vo
     };
   }
 
-  if (store[identifier].count >= MAX_REQUESTS) {
+  const entry = store[identifier];
+
+  if (entry.count >= MAX_REQUESTS) {
     res.status(429).json({
       success: false,
       error: 'Too many requests, please try again later',
@@ -31,11 +33,12 @@ export const rateLimiter = (req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  store[identifier].count++;
+  const baselineCount = entry.count;
+  entry.count++;
 
   res.once('finish', () => {
-    if (res.statusCode >= 400 && store[identifier]) {
-      store[identifier].count = Math.max(0, store[identifier].count - 1);
+    if (res.statusCode >= 400) {
+      entry.count = Math.max(baselineCount, entry.count - 1);
     }
   });
 

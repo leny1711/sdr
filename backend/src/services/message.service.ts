@@ -31,7 +31,6 @@ export class MessageService {
           user1Id: true,
           user2Id: true,
           textMessageCount: true,
-          revealLevel: true,
         },
       });
 
