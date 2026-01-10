@@ -68,7 +68,7 @@ export class MessageService {
         const nextTextCount = currentCount + 1;
         const previousReveal = conversation.revealLevel ?? computeRevealLevel(currentCount);
         const computedReveal = computeRevealLevel(nextTextCount);
-        const nextRevealLevel = Math.max(previousReveal, computedReveal) as ChapterNumber;
+        const nextRevealLevel = Math.min(Math.max(previousReveal, computedReveal), 4) as ChapterNumber;
         const chapterChanged = nextRevealLevel !== previousReveal;
         const newlyUnlocked: ChapterNumber[] = [];
 
@@ -99,7 +99,7 @@ export class MessageService {
 
         if (nextRevealLevel > previousReveal) {
           const unlockTime = new Date(message.createdAt.getTime() + 1);
-          for (let level = previousReveal + 1; level <= nextRevealLevel; level++) {
+          for (let level = Math.max(previousReveal + 1, 1); level <= nextRevealLevel; level++) {
             const key = `chapter${level}UnlockedAt` as keyof typeof conversation;
             if (!conversation[key]) {
               conversationUpdateData[key] = unlockTime;
