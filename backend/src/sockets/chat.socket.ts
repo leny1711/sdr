@@ -93,6 +93,10 @@ export const setupSocketHandlers = (io: Server) => {
         io.to(conversationId).emit('message:new', {
           message: result.message,
           revealLevel: result.revealLevel,
+          textMessageCount: result.textMessageCount,
+          chapter: result.chapter,
+          chapterChanged: result.chapterChanged,
+          systemMessage: result.systemMessage,
         });
 
         console.log(`Text message sent in conversation ${conversationId}`);

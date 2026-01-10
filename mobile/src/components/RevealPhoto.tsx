@@ -21,13 +21,6 @@ type RevealPhotoProps = {
   placeholder?: React.ReactNode;
 };
 
-const GRAYSCALE_OVERLAY_COLOR = 'rgba(0,0,0,0.32)';
-const MUTED_OVERLAY_COLOR = 'rgba(0,0,0,0.25)';
-const HIDDEN_PHOTO_OVERLAY_BOOST = 0.1;
-
-const calculateOverlayBoost = (photoHidden: boolean, revealLevel: number) =>
-  photoHidden && revealLevel <= 1 ? HIDDEN_PHOTO_OVERLAY_BOOST : 0;
-
 const RevealPhoto = ({
   photoUrl,
   revealLevel,
@@ -46,8 +39,6 @@ const RevealPhoto = ({
   const radiusStyle = borderRadius !== undefined ? { borderRadius } : undefined;
 
   const effects = getPhotoEffects(revealLevel);
-  const boostedOverlayOpacity = effects.overlayOpacity + calculateOverlayBoost(_photoHidden, revealLevel);
-  const overlayOpacity = Math.min(1, boostedOverlayOpacity);
 
   return (
     <View style={[styles.container, radiusStyle, containerStyle]}>
@@ -67,17 +58,6 @@ const RevealPhoto = ({
           />
           {effects.grayscale && Platform.OS !== 'web' && (
             <View pointerEvents="none" style={[styles.grayscaleTint, radiusStyle]} />
-          )}
-          {(overlayOpacity > 0 || effects.grayscale) && (
-            <View
-              pointerEvents="none"
-              style={[
-                styles.overlay,
-                radiusStyle,
-                effects.grayscale && styles.overlayMuted,
-                { opacity: overlayOpacity },
-              ]}
-            />
           )}
         </>
       ) : (
@@ -104,16 +84,9 @@ const styles = StyleSheet.create({
   grayscaleImageWeb: {
     ...(Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as unknown as ImageStyle) : {}),
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-  },
-  overlayMuted: {
-    backgroundColor: MUTED_OVERLAY_COLOR,
-  },
   grayscaleTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: GRAYSCALE_OVERLAY_COLOR,
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   placeholder: {
     ...StyleSheet.absoluteFillObject,

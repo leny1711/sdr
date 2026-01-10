@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import Screen from '../components/Screen';
@@ -6,26 +6,68 @@ import RevealPhoto from '../components/RevealPhoto';
 import { Colors, Typography, Spacing } from '../constants/theme';
 import { AppStackParamList } from '../navigation';
 import { getRevealChapter } from '../utils/reveal';
+import apiService from '../services/api';
+import socketService from '../services/socket';
 
 type MatchProfileRouteProp = RouteProp<AppStackParamList, 'MatchProfile'>;
 
 const MatchProfileScreen = () => {
   const { params } = useRoute<MatchProfileRouteProp>();
-  const { user, revealLevel } = params;
-  const ageLabel = typeof user.age === 'number' ? user.age : 'Âge inconnu';
-  const cityLabel = user.city || 'Ville inconnue';
+  const { user, revealLevel: initialRevealLevel, conversationId } = params;
+  const [profileUser, setProfileUser] = useState(user);
+  const [revealLevel, setRevealLevel] = useState(initialRevealLevel);
+
+  useEffect(() => {
+    setProfileUser(user);
+    setRevealLevel(initialRevealLevel);
+  }, [user, initialRevealLevel]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    let isMounted = true;
+    apiService
+      .getConversation(conversationId)
+      .then((conversation) => {
+        if (!isMounted) return;
+        if (conversation?.otherUser) {
+          setProfileUser(conversation.otherUser);
+          const nextReveal = conversation.revealLevel ?? initialRevealLevel;
+          setRevealLevel(nextReveal);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [conversationId, initialRevealLevel]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    const handleIncoming = (payload: any) => {
+      const incoming = payload?.message ? payload.message : payload;
+      if (incoming?.conversationId !== conversationId) return;
+      if (payload?.revealLevel !== undefined) {
+        setRevealLevel(payload.revealLevel);
+      }
+    };
+    socketService.onNewMessage(handleIncoming);
+    return () => socketService.offNewMessage(handleIncoming);
+  }, [conversationId]);
+
+  const ageLabel = typeof profileUser.age === 'number' ? profileUser.age : 'Âge inconnu';
+  const cityLabel = profileUser.city || 'Ville inconnue';
   // Keep the description readable but still progressively revealed alongside the photo
   const DESCRIPTION_BASE_OPACITY = 0.55;
   const DESCRIPTION_OPACITY_STEP = 0.1;
-  const descriptionText = user.description ?? '';
+  const descriptionText = profileUser.description ?? '';
   const descriptionOpacity = Math.min(1, DESCRIPTION_BASE_OPACITY + Math.max(0, revealLevel) * DESCRIPTION_OPACITY_STEP);
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <RevealPhoto
-          photoUrl={user.photoUrl || undefined}
-          photoHidden={user.photoHidden}
+          photoUrl={profileUser.photoUrl || undefined}
+          photoHidden={profileUser.photoHidden}
           revealLevel={revealLevel}
           containerStyle={styles.photo}
           borderRadius={12}
@@ -36,7 +78,7 @@ const MatchProfileScreen = () => {
           }
         />
 
-        <Text style={styles.name}>{user.name}</Text>
+        <Text style={styles.name}>{profileUser.name}</Text>
         <Text style={styles.info}>
           {ageLabel} • {cityLabel}
         </Text>

@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL } from '../config/api';
-import { Message } from '../types';
+import { Message, MessageEnvelope } from '../types';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -58,12 +58,12 @@ class SocketService {
   }
 
   // Listen for new messages
-  onNewMessage(callback: (payload: { message: Message; revealLevel?: number } | Message) => void) {
+  onNewMessage(callback: (payload: MessageEnvelope | { message: Message } | Message) => void) {
     this.socket?.on('message:new', callback);
   }
 
   // Remove message listener
-  offNewMessage(callback?: (message: Message) => void) {
+  offNewMessage(callback?: (payload: any) => void) {
     if (callback) {
       this.socket?.off('message:new', callback);
     } else {

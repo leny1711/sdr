@@ -1,5 +1,11 @@
 import prisma from '../config/database';
-import { applyRevealToUser, computeRevealLevel, normalizePhotoUrl } from '../utils/reveal.utils';
+import {
+  applyRevealToUser,
+  computeRevealLevel,
+  getChapterFromLevel,
+  getChapterSystemLabel,
+  normalizePhotoUrl,
+} from '../utils/reveal.utils';
 
 export class ConversationService {
   static async getConversation(userId: string, conversationId: string) {
@@ -41,7 +47,14 @@ export class ConversationService {
       throw new Error('Accès non autorisé à cette conversation');
     }
 
-    const revealLevel = conversation.revealLevel ?? 0;
+    const computedReveal = computeRevealLevel(conversation.textMessageCount);
+    if (conversation.revealLevel !== computedReveal) {
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { revealLevel: computedReveal },
+      });
+    }
+    const revealLevel = computedReveal;
     const otherUser = applyRevealToUser(
       conversation.user1Id === userId ? conversation.user2 : conversation.user1,
       revealLevel
@@ -97,7 +110,36 @@ export class ConversationService {
       take: limit,
     });
 
-    return messages.reverse();
+    const ordered = messages.reverse();
+    const textMessagesInBatch = ordered.filter((msg) => msg.type === 'TEXT').length;
+    let textCount = Math.max(0, conversation.textMessageCount - textMessagesInBatch);
+    let currentRevealLevel = computeRevealLevel(textCount);
+    let currentChapter = getChapterFromLevel(currentRevealLevel);
+
+    const enhancedMessages = ordered.flatMap((msg) => {
+      const result = [msg];
+      if (msg.type === 'TEXT') {
+        textCount += 1;
+        const nextRevealLevel = computeRevealLevel(textCount);
+        if (nextRevealLevel !== currentRevealLevel) {
+          currentRevealLevel = nextRevealLevel;
+          currentChapter = getChapterFromLevel(currentRevealLevel);
+          const systemTime = msg.createdAt.getTime() + 1;
+          const systemId = `system-${conversation.id}-${currentChapter}-${systemTime}`;
+          result.push({
+            id: systemId,
+            conversationId: conversation.id,
+            senderId: conversation.user1Id,
+            type: 'SYSTEM',
+            content: getChapterSystemLabel(currentChapter),
+            createdAt: new Date(systemTime),
+          } as any);
+        }
+      }
+      return result;
+    });
+
+    return enhancedMessages;
   }
 
   static async calculateRevealLevel(textMessageCount: number): Promise<number> {

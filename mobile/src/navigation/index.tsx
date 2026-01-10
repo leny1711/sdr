@@ -40,6 +40,7 @@ export type AppStackParamList = {
   MatchProfile: {
     user: User;
     revealLevel: number;
+    conversationId?: string;
   };
 };
 

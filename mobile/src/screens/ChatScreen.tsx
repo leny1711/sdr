@@ -23,7 +23,7 @@ import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import { markConversationAsRead } from '../services/unreadStorage';
 import RevealPhoto from '../components/RevealPhoto';
-import { deriveRevealProgress, getChapterNarrative, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
+import { getChapterNarrative, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 const conversationUnavailableMessage = 'Cette conversation est indisponible.';
@@ -95,42 +95,75 @@ const ChatScreen = () => {
     [messageTimestampCache]
   );
 
-  const applyConversationProgress = useCallback(
-    (existing: Conversation | null, updatedMessages: Message[], incomingRevealLevel?: number) => {
+  const mergeConversationProgress = useCallback(
+    (
+      existing: Conversation | null,
+      update?: { revealLevel?: number; textMessageCount?: number; otherUser?: Conversation['otherUser'] | null }
+    ) => {
       if (!existing) return existing;
-
-      const baseRevealLevel = incomingRevealLevel ?? existing.revealLevel;
-      const { revealLevel, textMessageCount } = deriveRevealProgress(
-        baseRevealLevel !== undefined ? { ...existing, revealLevel: baseRevealLevel } : existing,
-        updatedMessages
-      );
-      const effectiveLevel = Math.max(revealLevel, baseRevealLevel ?? 0);
-      const candidatePhoto = existing.otherUser?.photoUrl ?? matchPhotoUrl ?? null;
-      const nextPhotoHidden = shouldHidePhoto(effectiveLevel, candidatePhoto);
+      const nextReveal = update?.revealLevel ?? existing.revealLevel ?? 0;
+      const nextCount = update?.textMessageCount ?? existing.textMessageCount;
+      const updatedUser = update?.otherUser ?? existing.otherUser;
 
       if (
-        existing.textMessageCount === textMessageCount &&
-        (existing.revealLevel ?? 0) === effectiveLevel &&
-        existing.otherUser?.photoHidden === nextPhotoHidden
+        existing.revealLevel === nextReveal &&
+        existing.textMessageCount === nextCount &&
+        existing.otherUser === updatedUser
       ) {
         return existing;
       }
 
       return {
         ...existing,
-        textMessageCount,
-        revealLevel: effectiveLevel,
-        otherUser: existing.otherUser
-          ? { ...existing.otherUser, photoHidden: nextPhotoHidden }
-          : existing.otherUser,
+        revealLevel: nextReveal,
+        textMessageCount: nextCount,
+        otherUser: updatedUser
+          ? { ...updatedUser, photoHidden: shouldHidePhoto(nextReveal, updatedUser.photoUrl) }
+          : updatedUser ?? undefined,
       };
     },
-    [matchPhotoUrl]
+    []
+  );
+
+  const applyIncomingPayload = useCallback(
+    (payload: any) => {
+      const incomingMessage: Message = payload?.message ? payload.message : payload;
+      const incomingSystem: Message | undefined = payload?.systemMessage;
+      const incomingRevealLevel: number | undefined = payload?.revealLevel;
+      const incomingCount: number | undefined = payload?.textMessageCount;
+
+      setMessages((prev) => {
+        const withoutTemp = prev.filter(
+          (msg) =>
+            !(
+              msg.id?.startsWith('temp-') &&
+              msg.senderId === incomingMessage.senderId &&
+              msg.content === incomingMessage.content
+            )
+        );
+        const updatedMessages = dedupeMessages([
+          ...withoutTemp,
+          incomingMessage,
+          ...(incomingSystem ? [incomingSystem] : []),
+        ]);
+        setConversation((prevConversation) =>
+          mergeConversationProgress(prevConversation, {
+            revealLevel: incomingRevealLevel,
+            textMessageCount: incomingCount,
+          })
+        );
+        return updatedMessages;
+      });
+    },
+    [dedupeMessages, mergeConversationProgress]
   );
 
   const revealProgress = useMemo(
-    () => deriveRevealProgress(conversation, messages),
-    [conversation, messages]
+    () => ({
+      textMessageCount: conversation?.textMessageCount ?? 0,
+      revealLevel: conversation?.revealLevel ?? 0,
+    }),
+    [conversation?.revealLevel, conversation?.textMessageCount]
   );
 
   const triggerSendFeedback = () => {
@@ -166,6 +199,7 @@ const ChatScreen = () => {
     navigation.navigate('MatchProfile', {
       user: conversation.otherUser,
       revealLevel: revealProgress.revealLevel ?? 0,
+      conversationId,
     });
   };
 
@@ -182,18 +216,7 @@ const ChatScreen = () => {
     socketService.joinConversation(conversationId);
 
     // Listen for new messages
-    const handleNewMessage = (payload: Message | { message: Message; revealLevel?: number }) => {
-      const incomingMessage = (payload as any).message ? (payload as any).message : (payload as Message);
-      const incomingRevealLevel = (payload as any).revealLevel as number | undefined;
-
-      setMessages((prev) => {
-        const updatedMessages = dedupeMessages([...prev, incomingMessage]);
-        setConversation((prevConversation) =>
-          applyConversationProgress(prevConversation, updatedMessages, incomingRevealLevel)
-        );
-        return updatedMessages;
-      });
-    };
+    const handleNewMessage = (payload: any) => applyIncomingPayload(payload);
 
     // Listen for typing
     const handleTyping = (data: { userId: string; isTyping: boolean }) => {
@@ -212,7 +235,7 @@ const ChatScreen = () => {
       socketService.offNewMessage(handleNewMessage);
       socketService.offUserTyping(handleTyping);
     };
-  }, [conversationId, user?.id, dedupeMessages, applyConversationProgress]);
+  }, [conversationId, user?.id, applyIncomingPayload]);
 
   const loadConversation = async () => {
     if (!conversationId) return;
@@ -233,7 +256,6 @@ const ChatScreen = () => {
       if (Array.isArray(data)) {
         const deduped = dedupeMessages(data);
         setMessages(deduped);
-        setConversation((prev) => applyConversationProgress(prev, deduped));
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
@@ -272,18 +294,16 @@ const ChatScreen = () => {
     };
 
     // Add message to local state immediately
-    setMessages((prev) => {
-      const updated = dedupeMessages([...prev, optimisticMessage]);
-      setConversation((prevConversation) => applyConversationProgress(prevConversation, updated));
-      return updated;
-    });
+    setMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
 
     try {
-      await apiService.sendTextMessage({
+      const response = await apiService.sendTextMessage({
         conversationId,
         content: messageText,
       });
-      // Real message will be received via socket and will replace the optimistic one
+      if (response) {
+        applyIncomingPayload(response);
+      }
     } catch (error: any) {
       Alert.alert('Erreur', 'Envoi du message impossible.');
       // Remove optimistic message on error
@@ -315,10 +335,6 @@ const ChatScreen = () => {
       socketService.stopTyping(conversationId);
     }
   };
-
-  useEffect(() => {
-    setConversation((prev) => applyConversationProgress(prev, messages));
-  }, [messages, applyConversationProgress, conversation?.id]);
 
   useEffect(() => {
     if (!conversation?.id || !isFocused) return;
@@ -426,7 +442,7 @@ const ChatScreen = () => {
     [conversation?.otherUser?.photoUrl, matchPhotoUrl]
   );
   const revealLevel = revealProgress.revealLevel ?? 0;
-  const photoHidden = shouldHidePhoto(revealLevel, candidatePhoto);
+  const photoHidden = conversation?.otherUser?.photoHidden ?? shouldHidePhoto(revealLevel, candidatePhoto);
 
   if (isLoading) {
     return (
