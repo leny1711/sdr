@@ -31,6 +31,7 @@ export class MessageService {
           user1Id: true,
           user2Id: true,
           textMessageCount: true,
+          revealLevel: true,
         },
       });
 
@@ -41,8 +42,6 @@ export class MessageService {
       if (conversation.user1Id !== senderId && conversation.user2Id !== senderId) {
         throw new Error('Unauthorized access to conversation');
       }
-
-      const previousTextMessageCount = conversation.textMessageCount;
 
       const message = await tx.message.create({
         data: {
@@ -75,20 +74,19 @@ export class MessageService {
         },
       });
 
-      const newTextMessageCount = updatedConversation.textMessageCount;
-      const previousRevealLevel = computeRevealLevel(previousTextMessageCount);
-      const nextRevealLevel = computeRevealLevel(newTextMessageCount);
-      const chapter = getChapterFromLevel(nextRevealLevel);
-      const chapterChanged = nextRevealLevel !== previousRevealLevel;
+      const updatedRevealLevel = computeRevealLevel(updatedConversation.textMessageCount);
+      const chapterChanged = updatedRevealLevel > updatedConversation.revealLevel;
 
-      if (nextRevealLevel > updatedConversation.revealLevel) {
+      if (chapterChanged) {
         await tx.conversation.update({
           where: { id: conversationId },
           data: {
-            revealLevel: nextRevealLevel,
+            revealLevel: updatedRevealLevel,
           },
         });
       }
+
+      const chapter = getChapterFromLevel(updatedRevealLevel);
 
       const systemMessage = chapterChanged
         ? buildSystemMessage(conversationId, chapter, message.createdAt, conversation.user1Id)
@@ -96,8 +94,8 @@ export class MessageService {
 
       return {
         message,
-        revealLevel: nextRevealLevel,
-        textMessageCount: newTextMessageCount,
+        revealLevel: updatedRevealLevel,
+        textMessageCount: updatedConversation.textMessageCount,
         chapter,
         chapterChanged,
         systemMessage,
