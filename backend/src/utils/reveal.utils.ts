@@ -33,7 +33,7 @@ export const applyRevealToUser = <T extends WithPhoto>(user: T, revealLevel: num
   };
 };
 
-export const getChapterSystemLabel = (chapter: number) => {
+export const getChapterSystemLabel = (chapter: ChapterNumber) => {
   switch (chapter) {
     case 0:
       return 'Chapitre 0 — Verrouillé';

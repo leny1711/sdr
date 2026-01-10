@@ -134,7 +134,7 @@ export class ConversationService {
     return enhancedMessages;
   }
 
-  static async calculateRevealLevel(textMessageCount: number): Promise<number> {
+  static calculateRevealLevel(textMessageCount: number): number {
     return computeRevealLevel(textMessageCount);
   }
 
