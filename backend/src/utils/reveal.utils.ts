@@ -10,6 +10,13 @@ export const normalizePhotoUrl = (value?: string | null): string | null => {
   return trimmed.length ? trimmed : null;
 };
 
+export const computeChapterFromMessageCount = (messageCount: number): ChapterNumber => {
+  if (messageCount >= 50) return 3;
+  if (messageCount >= 25) return 2;
+  if (messageCount >= 10) return 1;
+  return 0;
+};
+
 export const computeRevealLevel = (textMessageCount: number): RevealLevel => {
   if (textMessageCount >= 50) return 3;
   if (textMessageCount >= 25) return 2;
@@ -20,7 +27,7 @@ export const computeRevealLevel = (textMessageCount: number): RevealLevel => {
 export const applyRevealToUser = <T extends WithPhoto>(user: T, revealLevel: number) => {
   const normalizedPhoto = normalizePhotoUrl(user.photoUrl);
 
-  const canRevealPhoto = revealLevel >= 0;
+  const canRevealPhoto = revealLevel > 0;
   const photoHidden = !normalizedPhoto || !canRevealPhoto;
 
   return {
@@ -30,11 +37,10 @@ export const applyRevealToUser = <T extends WithPhoto>(user: T, revealLevel: num
   };
 };
 
-export const getChapterFromLevel = (revealLevel: number): ChapterNumber =>
-  Math.max(1, Math.min(4, revealLevel + 1)) as ChapterNumber;
-
-export const getChapterSystemLabel = (chapter: number) => {
+export const getChapterSystemLabel = (chapter: ChapterNumber) => {
   switch (chapter) {
+    case 0:
+      return 'Chapitre 0 — Verrouillé';
     case 1:
       return 'Chapitre 1 — Le début';
     case 2:

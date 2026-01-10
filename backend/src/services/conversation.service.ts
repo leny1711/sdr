@@ -1,8 +1,8 @@
 import prisma from '../config/database';
 import {
   applyRevealToUser,
+  computeChapterFromMessageCount,
   computeRevealLevel,
-  getChapterFromLevel,
   getChapterSystemLabel,
   normalizePhotoUrl,
 } from '../utils/reveal.utils';
@@ -47,14 +47,7 @@ export class ConversationService {
       throw new Error('Accès non autorisé à cette conversation');
     }
 
-    const computedReveal = computeRevealLevel(conversation.textMessageCount);
-    if (conversation.revealLevel !== computedReveal) {
-      await prisma.conversation.update({
-        where: { id: conversationId },
-        data: { revealLevel: computedReveal },
-      });
-    }
-    const revealLevel = computedReveal;
+    const revealLevel = computeRevealLevel(conversation.textMessageCount);
     const otherUser = applyRevealToUser(
       conversation.user1Id === userId ? conversation.user2 : conversation.user1,
       revealLevel
@@ -62,6 +55,7 @@ export class ConversationService {
 
     return {
       ...conversation,
+      revealLevel,
       user1:
         conversation.user1Id === userId
           ? { ...conversation.user1, photoUrl: normalizePhotoUrl(conversation.user1.photoUrl) }
@@ -113,17 +107,15 @@ export class ConversationService {
     const ordered = messages.reverse();
     const textMessagesInBatch = ordered.filter((msg) => msg.type === 'TEXT').length;
     let textCount = Math.max(0, conversation.textMessageCount - textMessagesInBatch);
-    let currentRevealLevel = computeRevealLevel(textCount);
-    let currentChapter = getChapterFromLevel(currentRevealLevel);
+    let currentChapter = computeChapterFromMessageCount(textCount);
 
     const enhancedMessages = ordered.flatMap((msg) => {
       const result = [msg];
       if (msg.type === 'TEXT') {
         textCount += 1;
-        const nextRevealLevel = computeRevealLevel(textCount);
-        if (nextRevealLevel !== currentRevealLevel) {
-          currentRevealLevel = nextRevealLevel;
-          currentChapter = getChapterFromLevel(currentRevealLevel);
+        const nextChapter = computeChapterFromMessageCount(textCount);
+        if (nextChapter !== currentChapter) {
+          currentChapter = nextChapter;
           const systemTime = msg.createdAt.getTime() + 1;
           const systemId = `system-${conversation.id}-${currentChapter}-${systemTime}`;
           result.push({
@@ -142,7 +134,7 @@ export class ConversationService {
     return enhancedMessages;
   }
 
-  static async calculateRevealLevel(textMessageCount: number): Promise<number> {
+  static calculateRevealLevel(textMessageCount: number): number {
     return computeRevealLevel(textMessageCount);
   }
 
@@ -155,15 +147,6 @@ export class ConversationService {
       throw new Error('Conversation not found');
     }
 
-    const newRevealLevel = await this.calculateRevealLevel(conversation.textMessageCount);
-
-    if (newRevealLevel !== conversation.revealLevel) {
-      await prisma.conversation.update({
-        where: { id: conversationId },
-        data: { revealLevel: newRevealLevel },
-      });
-    }
-
-    return newRevealLevel;
+    return this.calculateRevealLevel(conversation.textMessageCount);
   }
 }
