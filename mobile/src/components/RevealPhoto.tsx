@@ -11,6 +11,10 @@ import {
 import { Colors } from '../constants/theme';
 import { getPhotoEffects } from '../utils/reveal';
 
+const OBSCURE_MIN_BLUR = 18;
+const OBSCURE_MAX_OPACITY = 0.9;
+const OBSCURE_OVERLAY_COLOR = 'rgba(0,0,0,0.32)';
+
 type RevealPhotoProps = {
   photoUrl?: string | null;
   revealLevel: number;
@@ -43,10 +47,10 @@ const RevealPhoto = ({
   const effectiveEffects = shouldObscure
     ? {
         ...effects,
-        blurRadius: Math.max(effects.blurRadius ?? 0, 18),
+        blurRadius: Math.max(effects.blurRadius ?? 0, OBSCURE_MIN_BLUR),
         grayscale: true,
-        imageOpacity: Math.min(effects.imageOpacity ?? 1, 0.9),
-        overlayColor: effects.overlayColor ?? 'rgba(0,0,0,0.32)',
+        imageOpacity: Math.min(effects.imageOpacity ?? 1, OBSCURE_MAX_OPACITY),
+        overlayColor: effects.overlayColor ?? OBSCURE_OVERLAY_COLOR,
       }
     : effects;
 

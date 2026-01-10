@@ -1,6 +1,5 @@
 import { Conversation, Message } from '../types';
-
-const CHAPTER_THRESHOLDS = [0, 10, 25, 50, 80];
+import { CHAPTER_THRESHOLDS, MAX_REVEAL_LEVEL } from '../constants/reveal';
 
 export const calculateRevealLevel = (count: number): number => {
   if (count >= CHAPTER_THRESHOLDS[4]) return 4;
@@ -14,11 +13,17 @@ const countTextMessages = (messages: Message[]) =>
   messages.filter((message) => message?.type === 'TEXT').length;
 
 export const deriveRevealProgress = (conversation?: Conversation | null, messages: Message[] = []) => {
+  const messageTextCount = countTextMessages(messages);
+  const conversationCount = conversation?.textMessageCount;
+  const derivedCount = conversationCount ?? messageTextCount;
+  const derivedReveal =
+    conversation?.revealLevel ??
+    (conversationCount !== undefined
+      ? calculateRevealLevel(conversationCount)
+      : calculateRevealLevel(messageTextCount));
   return {
-    textMessageCount: conversation?.textMessageCount ?? countTextMessages(messages),
-    revealLevel:
-      conversation?.revealLevel ??
-      calculateRevealLevel(conversation?.textMessageCount ?? countTextMessages(messages)),
+    textMessageCount: derivedCount,
+    revealLevel: derivedReveal,
   };
 };
 
@@ -38,7 +43,7 @@ export const getRevealChapter = (level: number): string => {
 };
 
 export const getPhotoEffects = (level: number) => {
-  const clampedLevel = Math.max(0, Math.min(4, Math.round(level)));
+  const clampedLevel = Math.max(0, Math.min(MAX_REVEAL_LEVEL, Math.round(level)));
 
   if (clampedLevel === 0) {
     return { blurRadius: 24, grayscale: true, imageOpacity: 0.8, overlayColor: 'rgba(0,0,0,0.35)' };
@@ -60,7 +65,7 @@ export const getPhotoEffects = (level: number) => {
 };
 
 export const getChapterNarrative = (level: number): string => {
-  const clampedLevel = Math.max(0, Math.min(4, Math.round(level)));
+  const clampedLevel = Math.max(0, Math.min(MAX_REVEAL_LEVEL, Math.round(level)));
   switch (clampedLevel) {
     case 0:
       return 'Chapitre 0 – Verrouillé';
