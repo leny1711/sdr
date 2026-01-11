@@ -67,6 +67,9 @@ export const setupSocketHandlers = (io: Server) => {
       }
     };
 
+    let lastTypingAt = 0;
+    const TYPING_RATE_LIMIT_MS = 800;
+
     const cleanAndJoinConversation = (conversationId: string) => {
       if (socket.currentConversationId === conversationId && socket.rooms.size <= 2) {
         return;
@@ -230,13 +233,14 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'typing:start',
       withErrorHandling((data: TypingData) => {
+        const now = Date.now();
+        if (now - lastTypingAt < TYPING_RATE_LIMIT_MS) return;
+        lastTypingAt = now;
+
         const conversationId = (data?.conversationId ?? '').trim();
-        if (!conversationId) {
-          return;
-        }
-        if (socket.currentConversationId !== conversationId) {
-          return;
-        }
+        if (!conversationId) return;
+        if (socket.currentConversationId !== conversationId) return;
+
         socket.to(conversationId).emit('typing:user', {
           userId: socket.userId,
           isTyping: true,
@@ -247,13 +251,14 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'typing:stop',
       withErrorHandling((data: TypingData) => {
+        const now = Date.now();
+        if (now - lastTypingAt < TYPING_RATE_LIMIT_MS) return;
+        lastTypingAt = now;
+
         const conversationId = (data?.conversationId ?? '').trim();
-        if (!conversationId) {
-          return;
-        }
-        if (socket.currentConversationId !== conversationId) {
-          return;
-        }
+        if (!conversationId) return;
+        if (socket.currentConversationId !== conversationId) return;
+
         socket.to(conversationId).emit('typing:user', {
           userId: socket.userId,
           isTyping: false,
@@ -262,6 +267,7 @@ export const setupSocketHandlers = (io: Server) => {
     );
 
     socket.on('disconnect', () => {
+      socket.currentConversationId = undefined;
       console.log(`Client disconnected: ${socket.id} (User: ${socket.userId})`);
     });
   });
