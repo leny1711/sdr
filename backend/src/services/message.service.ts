@@ -127,7 +127,7 @@ export class MessageService {
         const progressionData: { revealLevel: number } & Partial<Record<UnlockField, Date>> = {
           revealLevel: nextChapter,
         };
-        if (!unlockedAt) {
+        if (unlockedAt == null) {
           progressionData[unlockField] = unlockTime;
         }
 
