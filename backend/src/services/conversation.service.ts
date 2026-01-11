@@ -101,12 +101,14 @@ export class ConversationService {
       orderBy: {
         createdAt: 'desc',
       },
-      take: safeLimit,
+      take: safeLimit + 1,
     });
 
-    const oldestMessage = messages.length > 0 ? messages[messages.length - 1] : undefined;
-    const orderedMessages = messages.reverse();
-    const nextCursor = oldestMessage ? oldestMessage.createdAt.toISOString() : null;
+    const hasMore = messages.length > safeLimit;
+    const pageMessages = hasMore ? messages.slice(0, safeLimit) : messages;
+    const oldestMessage = pageMessages.length > 0 ? pageMessages[pageMessages.length - 1] : undefined;
+    const orderedMessages = pageMessages.reverse();
+    const nextCursor = hasMore && oldestMessage ? oldestMessage.createdAt.toISOString() : null;
 
     return {
       messages: orderedMessages,

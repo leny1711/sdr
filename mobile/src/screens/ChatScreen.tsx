@@ -280,10 +280,14 @@ const ChatScreen = () => {
     try {
       setIsLoadingOlder(true);
       const data = await apiService.getMessages(conversationId, nextCursor);
-      if (data && Array.isArray(data.messages) && data.messages.length > 0) {
-        setMessages((prev) => dedupeMessages([...data.messages, ...prev]));
+      if (data && Array.isArray(data.messages)) {
+        if (data.messages.length > 0) {
+          setMessages((prev) => dedupeMessages([...data.messages, ...prev]));
+        }
+        setNextCursor(data.nextCursor ?? null);
+      } else {
+        setNextCursor(null);
       }
-      setNextCursor(data?.nextCursor ?? null);
     } catch (error: any) {
       console.error('Erreur lors du chargement des anciens messages', error);
       Alert.alert('Erreur', 'Impossible de charger les messages précédents.');
@@ -556,14 +560,14 @@ const ChatScreen = () => {
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-           ListHeaderComponent={renderListHeader}
+          ListHeaderComponent={renderListHeader}
           contentContainerStyle={styles.messagesList}
-           onContentSizeChange={() => {
-             if (!isLoadingOlder) {
-               flatListRef.current?.scrollToEnd();
-             }
-           }}
-           onLayout={() => flatListRef.current?.scrollToEnd()}
+          onContentSizeChange={() => {
+            if (!isLoadingOlder) {
+              flatListRef.current?.scrollToEnd();
+            }
+          }}
+          onLayout={() => flatListRef.current?.scrollToEnd()}
         />
 
         {typingUser && (
