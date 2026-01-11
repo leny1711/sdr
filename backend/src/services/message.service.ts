@@ -109,10 +109,12 @@ export class MessageService {
         if (count >= 10) return 1;
         return 0;
       };
+      type UnlockField = ReturnType<typeof MessageService.getUnlockField>;
       const nextChapter = resolveChapterFromCount(textMessageCount);
       const currentRevealLevel = MessageService.clampChapterNumber(updatedConversation.revealLevel ?? 0);
       const unlockField = nextChapter > 0 ? MessageService.getUnlockField(nextChapter) : undefined;
-      const alreadyUnlocked = unlockField ? Boolean((updatedConversation as any)[unlockField]) : true;
+      const unlockedAt: Date | null | undefined = unlockField ? updatedConversation[unlockField] : undefined;
+      const alreadyUnlocked = unlockField ? Boolean(unlockedAt) : true;
       const chapterChanged = Boolean(nextChapter && !alreadyUnlocked && nextChapter > currentRevealLevel);
 
       let finalRevealLevel: RevealLevel = MessageService.clampChapterNumber(
@@ -122,12 +124,16 @@ export class MessageService {
 
       if (chapterChanged && unlockField) {
         const unlockTime = new Date(message.createdAt.getTime() + 1);
+        const progressionData: { revealLevel: number } & Partial<Record<UnlockField, Date>> = {
+          revealLevel: nextChapter,
+        };
+        if (!unlockedAt) {
+          progressionData[unlockField] = unlockTime;
+        }
+
         const progression = await prisma.conversation.update({
           where: { id: conversationId },
-          data: {
-            revealLevel: nextChapter,
-            [unlockField]: (updatedConversation as any)[unlockField] ?? unlockTime,
-          },
+          data: progressionData,
           select: {
             revealLevel: true,
             user1Id: true,
