@@ -3,6 +3,9 @@ import { AuthService } from '../services/auth.service';
 import { MessageService } from '../services/message.service';
 import { ConversationService } from '../services/conversation.service';
 
+const MESSAGE_RATE_LIMIT_MS = 400;
+const MAX_MESSAGE_LENGTH = 1000;
+
 interface AuthenticatedSocket extends Socket {
   userId?: string;
   currentConversationId?: string;
@@ -47,35 +50,32 @@ export const setupSocketHandlers = (io: Server) => {
   });
 
   io.on('connection', (socket: AuthenticatedSocket) => {
-    const MESSAGE_RATE_LIMIT_MS = 400;
-    const MAX_MESSAGE_LENGTH = 1000;
-
     const handleError = (error: unknown) => {
       const message = error instanceof Error ? error.message : 'Une erreur est survenue';
       socket.emit('error', { message });
     };
 
     const withErrorHandling =
-      (handler: (...args: any[]) => Promise<void> | void) =>
-      (...args: any[]) => {
+      <T extends any[]>(handler: (...args: T) => Promise<void> | void) =>
+      (...args: T) => {
         Promise.resolve(handler(...args)).catch(handleError);
       };
 
     const requireAuth = () => {
       if (!socket.userId) {
-        throw new Error('Not authenticated');
+        throw new Error('Authentification requise');
       }
     };
 
     const cleanAndJoinConversation = (conversationId: string) => {
-      for (const room of socket.rooms) {
-        if (room !== socket.id && room !== conversationId) {
-          socket.leave(room);
-        }
+      if (socket.currentConversationId === conversationId && socket.rooms.size <= 2) {
+        return;
       }
 
-      if (socket.currentConversationId && socket.currentConversationId !== conversationId) {
-        socket.leave(socket.currentConversationId);
+      for (const room of socket.rooms) {
+        if (room !== socket.id) {
+          socket.leave(room);
+        }
       }
 
       socket.currentConversationId = conversationId;
@@ -84,7 +84,8 @@ export const setupSocketHandlers = (io: Server) => {
 
     const enforceSocketRateLimit = () => {
       const now = Date.now();
-      if (socket.lastMessageAt && now - socket.lastMessageAt < MESSAGE_RATE_LIMIT_MS) {
+      const elapsed = socket.lastMessageAt ? now - socket.lastMessageAt : undefined;
+      if (elapsed !== undefined && elapsed < MESSAGE_RATE_LIMIT_MS) {
         throw new Error('Envoi du message impossible. Merci de patienter quelques instants.');
       }
       socket.lastMessageAt = now;
@@ -95,7 +96,10 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'join:conversation',
       withErrorHandling(async (data: JoinRoomData) => {
-        const { conversationId } = data;
+        const conversationId = (data?.conversationId ?? '').trim();
+        if (!conversationId) {
+          throw new Error('Conversation invalide');
+        }
 
         requireAuth();
 
@@ -115,7 +119,10 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'leave:conversation',
       withErrorHandling((data: JoinRoomData) => {
-        const { conversationId } = data;
+        const conversationId = (data?.conversationId ?? '').trim();
+        if (!conversationId) {
+          return;
+        }
         socket.leave(conversationId);
         if (socket.currentConversationId === conversationId) {
           socket.currentConversationId = undefined;
@@ -127,9 +134,13 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'message:text',
       withErrorHandling(async (data: TextMessageData) => {
-        const { conversationId, content } = data;
+        const conversationId = (data?.conversationId ?? '').trim();
+        const content = data?.content;
 
         requireAuth();
+        if (!conversationId) {
+          throw new Error('Conversation invalide');
+        }
         if (socket.currentConversationId !== conversationId) {
           throw new Error('Rejoignez la conversation avant d’envoyer un message');
         }
@@ -146,23 +157,28 @@ export const setupSocketHandlers = (io: Server) => {
         enforceSocketRateLimit();
 
         const result = await MessageService.sendTextMessage(conversationId, socket.userId!, sanitizedContent);
+        const systemMessage = result.systemMessage;
+        // MessageService exposes chapterChanged when progression occurs; use it directly to drive unlock notifications
         const justUnlockedChapter = Boolean(result.chapterChanged);
+
+        const revealLevel = result.revealLevel ?? null;
 
         io.to(conversationId).emit('message:new', {
           message: result.message,
-          revealLevel: result.revealLevel,
+          revealLevel,
           textMessageCount: result.textMessageCount,
           chapter: result.chapter,
           chapterChanged: result.chapterChanged,
-          systemMessage: result.systemMessage,
+          systemMessage,
           justUnlockedChapter,
         });
 
-        if (justUnlockedChapter && result.systemMessage) {
+        // Emit a dedicated event only when a new chapter is actually unlocked
+        if (justUnlockedChapter) {
           io.to(conversationId).emit('chapter:unlocked', {
             conversationId,
             chapter: result.chapter,
-            revealLevel: result.revealLevel,
+            revealLevel,
             systemMessage: result.systemMessage,
           });
         }
@@ -174,11 +190,24 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'message:voice',
       withErrorHandling(async (data: VoiceMessageData) => {
-        const { conversationId, audioUrl, audioDuration } = data;
+        const conversationId = (data?.conversationId ?? '').trim();
+        const audioUrl = (data?.audioUrl ?? '').trim();
+        const audioDuration = data?.audioDuration;
 
         requireAuth();
+        if (!conversationId) {
+          throw new Error('Conversation invalide');
+        }
         if (socket.currentConversationId !== conversationId) {
           throw new Error('Rejoignez la conversation avant d’envoyer un message');
+        }
+
+        if (!audioUrl) {
+          throw new Error('Audio manquant');
+        }
+
+        if (!audioDuration || audioDuration <= 0) {
+          throw new Error('Durée audio invalide');
         }
 
         enforceSocketRateLimit();
@@ -201,7 +230,10 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'typing:start',
       withErrorHandling((data: TypingData) => {
-        const { conversationId } = data;
+        const conversationId = (data?.conversationId ?? '').trim();
+        if (!conversationId) {
+          return;
+        }
         if (socket.currentConversationId !== conversationId) {
           return;
         }
@@ -215,7 +247,10 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on(
       'typing:stop',
       withErrorHandling((data: TypingData) => {
-        const { conversationId } = data;
+        const conversationId = (data?.conversationId ?? '').trim();
+        if (!conversationId) {
+          return;
+        }
         if (socket.currentConversationId !== conversationId) {
           return;
         }
