@@ -10,6 +10,7 @@ import {
   Conversation,
   Message,
   MessageEnvelope,
+  MessagePage,
   LikeRequest,
   MessageRequest,
 } from '../types';
@@ -117,8 +118,16 @@ class ApiService {
     return response.data.data;
   }
 
-  async getMessages(conversationId: string): Promise<Message[]> {
-    const response = await this.api.get<{ success: boolean; data: Message[] }>(`/api/conversations/${conversationId}/messages`);
+  async getMessages(conversationId: string, cursor?: string, limit: number = 50): Promise<MessagePage> {
+    const response = await this.api.get<{ success: boolean; data: MessagePage }>(
+      `/api/conversations/${conversationId}/messages`,
+      {
+        params: {
+          limit,
+          ...(cursor ? { cursor } : {}),
+        },
+      }
+    );
     return response.data.data;
   }
 

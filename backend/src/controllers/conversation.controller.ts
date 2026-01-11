@@ -30,13 +30,13 @@ export class ConversationController {
       const userId = req.user!.userId;
       const { conversationId } = req.params;
       const limit = parseInt(req.query.limit as string) || 50;
-      const before = req.query.before as string;
+      const cursor = req.query.cursor as string;
 
-      const messages = await ConversationService.getMessages(conversationId, userId, limit, before);
+      const { messages, nextCursor } = await ConversationService.getMessages(conversationId, userId, limit, cursor);
 
       return res.status(200).json({
         success: true,
-        data: messages,
+        data: { messages, nextCursor },
       });
     } catch (error) {
       if (error instanceof Error) {

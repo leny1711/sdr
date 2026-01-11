@@ -51,8 +51,10 @@ const ChatScreen = () => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -253,20 +255,44 @@ const ChatScreen = () => {
     if (!conversationId) return;
     try {
       setIsLoading(true);
+      setNextCursor(null);
       const data = await apiService.getMessages(conversationId);
-      // Add guard to ensure data is an array
-      if (Array.isArray(data)) {
-        const deduped = dedupeMessages(data);
+      if (data && Array.isArray(data.messages)) {
+        const deduped = dedupeMessages(data.messages);
         setMessages(deduped);
+        setNextCursor(data.nextCursor ?? null);
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
         setMessages([]);
+        setNextCursor(null);
       }
     } catch (error: any) {
       Alert.alert('Erreur', 'Impossible de charger les messages.');
+      setNextCursor(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadOlderMessages = async () => {
+    if (!conversationId || !nextCursor || isLoadingOlder) return;
+    try {
+      setIsLoadingOlder(true);
+      const data = await apiService.getMessages(conversationId, nextCursor);
+      if (data && Array.isArray(data.messages)) {
+        if (data.messages.length > 0) {
+          setMessages((prev) => dedupeMessages([...data.messages, ...prev]));
+        }
+        setNextCursor(data.nextCursor ?? null);
+      } else {
+        setNextCursor(null);
+      }
+    } catch (error: any) {
+      console.error('Erreur lors du chargement des anciens messages', error);
+      Alert.alert('Erreur', 'Impossible de charger les messages précédents.');
+    } finally {
+      setIsLoadingOlder(false);
     }
   };
 
@@ -437,6 +463,27 @@ const ChatScreen = () => {
     );
   };
 
+  const renderListHeader = () => {
+    if (isLoadingOlder) {
+      return (
+        <View style={styles.loadMoreContainer}>
+          <ActivityIndicator size="small" color={Colors.textSecondary} />
+          <Text style={styles.loadMoreText}>Chargement des messages précédents...</Text>
+        </View>
+      );
+    }
+
+    if (!nextCursor) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity style={styles.loadMoreButton} onPress={loadOlderMessages} activeOpacity={0.85}>
+        <Text style={styles.loadMoreText}>Voir les messages précédents</Text>
+      </TouchableOpacity>
+    );
+  };
+
   const displayName = conversation?.otherUser?.name || matchName;
   const displayInitial = displayName?.[0]?.toUpperCase() || '?';
   const candidatePhoto = useMemo(
@@ -513,8 +560,13 @@ const ChatScreen = () => {
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={renderListHeader}
           contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+          onContentSizeChange={() => {
+            if (!isLoadingOlder) {
+              flatListRef.current?.scrollToEnd();
+            }
+          }}
           onLayout={() => flatListRef.current?.scrollToEnd()}
         />
 
@@ -630,6 +682,19 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     padding: Spacing.lg,
+  },
+  loadMoreButton: {
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+  },
+  loadMoreContainer: {
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontSans,
+    color: Colors.textSecondary,
   },
   systemMessageContainer: {
     alignSelf: 'center',

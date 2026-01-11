@@ -62,7 +62,7 @@ export class ConversationService {
     };
   }
 
-  static async getMessages(conversationId: string, userId: string, limit: number = 50, before?: string) {
+  static async getMessages(conversationId: string, userId: string, limit: number = 50, cursor?: string) {
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
     });
@@ -75,12 +75,18 @@ export class ConversationService {
       throw new Error('Accès non autorisé à cette conversation');
     }
 
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const cursorDate = cursor ? new Date(cursor) : undefined;
+    if (cursorDate && isNaN(cursorDate.getTime())) {
+      throw new Error('Curseur de pagination invalide');
+    }
+
     const messages = await prisma.message.findMany({
       where: {
         conversationId,
-        ...(before && {
+        ...(cursorDate && {
           createdAt: {
-            lt: new Date(before),
+            lt: cursorDate,
           },
         }),
       },
@@ -95,10 +101,19 @@ export class ConversationService {
       orderBy: {
         createdAt: 'desc',
       },
-      take: limit,
+      take: safeLimit + 1,
     });
 
-    return messages.reverse();
+    const hasMore = messages.length > safeLimit;
+    const pageMessages = hasMore ? messages.slice(0, safeLimit) : messages;
+    const oldestMessage = pageMessages.length > 0 ? pageMessages[pageMessages.length - 1] : undefined;
+    const orderedMessages = pageMessages.reverse();
+    const nextCursor = hasMore && oldestMessage ? oldestMessage.createdAt.toISOString() : null;
+
+    return {
+      messages: orderedMessages,
+      nextCursor,
+    };
   }
 
   static calculateRevealLevel(textMessageCount: number): number {
