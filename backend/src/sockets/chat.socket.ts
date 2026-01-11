@@ -5,6 +5,8 @@ import { ConversationService } from '../services/conversation.service';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
+  currentConversationId?: string;
+  lastMessageAt?: number;
 }
 
 interface JoinRoomData {
@@ -45,20 +47,61 @@ export const setupSocketHandlers = (io: Server) => {
   });
 
   io.on('connection', (socket: AuthenticatedSocket) => {
+    const MESSAGE_RATE_LIMIT_MS = 400;
+    const MAX_MESSAGE_LENGTH = 1000;
+
+    const handleError = (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Une erreur est survenue';
+      socket.emit('error', { message });
+    };
+
+    const withErrorHandling =
+      (handler: (...args: any[]) => Promise<void> | void) =>
+      (...args: any[]) => {
+        Promise.resolve(handler(...args)).catch(handleError);
+      };
+
+    const requireAuth = () => {
+      if (!socket.userId) {
+        throw new Error('Not authenticated');
+      }
+    };
+
+    const cleanAndJoinConversation = (conversationId: string) => {
+      for (const room of socket.rooms) {
+        if (room !== socket.id && room !== conversationId) {
+          socket.leave(room);
+        }
+      }
+
+      if (socket.currentConversationId && socket.currentConversationId !== conversationId) {
+        socket.leave(socket.currentConversationId);
+      }
+
+      socket.currentConversationId = conversationId;
+      socket.join(conversationId);
+    };
+
+    const enforceSocketRateLimit = () => {
+      const now = Date.now();
+      if (socket.lastMessageAt && now - socket.lastMessageAt < MESSAGE_RATE_LIMIT_MS) {
+        throw new Error('Envoi du message impossible. Merci de patienter quelques instants.');
+      }
+      socket.lastMessageAt = now;
+    };
+
     console.log(`Client connected: ${socket.id} (User: ${socket.userId})`);
 
-    socket.on('join:conversation', async (data: JoinRoomData) => {
-      try {
+    socket.on(
+      'join:conversation',
+      withErrorHandling(async (data: JoinRoomData) => {
         const { conversationId } = data;
 
-        if (!socket.userId) {
-          socket.emit('error', { message: 'Not authenticated' });
-          return;
-        }
+        requireAuth();
 
-        const conversation = await ConversationService.getConversation(socket.userId, conversationId);
+        const conversation = await ConversationService.getConversation(socket.userId!, conversationId);
 
-        socket.join(conversationId);
+        cleanAndJoinConversation(conversationId);
 
         socket.emit('conversation:joined', {
           conversationId,
@@ -66,29 +109,44 @@ export const setupSocketHandlers = (io: Server) => {
         });
 
         console.log(`User ${socket.userId} joined conversation ${conversationId}`);
-      } catch (error) {
-        if (error instanceof Error) {
-          socket.emit('error', { message: error.message });
+      })
+    );
+
+    socket.on(
+      'leave:conversation',
+      withErrorHandling((data: JoinRoomData) => {
+        const { conversationId } = data;
+        socket.leave(conversationId);
+        if (socket.currentConversationId === conversationId) {
+          socket.currentConversationId = undefined;
         }
-      }
-    });
+        console.log(`User ${socket.userId} left conversation ${conversationId}`);
+      })
+    );
 
-    socket.on('leave:conversation', (data: JoinRoomData) => {
-      const { conversationId } = data;
-      socket.leave(conversationId);
-      console.log(`User ${socket.userId} left conversation ${conversationId}`);
-    });
-
-    socket.on('message:text', async (data: TextMessageData) => {
-      try {
+    socket.on(
+      'message:text',
+      withErrorHandling(async (data: TextMessageData) => {
         const { conversationId, content } = data;
 
-        if (!socket.userId) {
-          socket.emit('error', { message: 'Not authenticated' });
-          return;
+        requireAuth();
+        if (socket.currentConversationId !== conversationId) {
+          throw new Error('Rejoignez la conversation avant d’envoyer un message');
         }
 
-        const result = await MessageService.sendTextMessage(conversationId, socket.userId, content);
+        const sanitizedContent = (content ?? '').trim();
+        if (!sanitizedContent) {
+          throw new Error('Message vide');
+        }
+
+        if (sanitizedContent.length > MAX_MESSAGE_LENGTH) {
+          throw new Error('Message trop long');
+        }
+
+        enforceSocketRateLimit();
+
+        const result = await MessageService.sendTextMessage(conversationId, socket.userId!, sanitizedContent);
+        const justUnlockedChapter = Boolean(result.chapterChanged);
 
         io.to(conversationId).emit('message:new', {
           message: result.message,
@@ -97,28 +155,37 @@ export const setupSocketHandlers = (io: Server) => {
           chapter: result.chapter,
           chapterChanged: result.chapterChanged,
           systemMessage: result.systemMessage,
+          justUnlockedChapter,
         });
 
-        console.log(`Text message sent in conversation ${conversationId}`);
-      } catch (error) {
-        if (error instanceof Error) {
-          socket.emit('error', { message: error.message });
+        if (justUnlockedChapter && result.systemMessage) {
+          io.to(conversationId).emit('chapter:unlocked', {
+            conversationId,
+            chapter: result.chapter,
+            revealLevel: result.revealLevel,
+            systemMessage: result.systemMessage,
+          });
         }
-      }
-    });
 
-    socket.on('message:voice', async (data: VoiceMessageData) => {
-      try {
+        console.log(`Text message sent in conversation ${conversationId}`);
+      })
+    );
+
+    socket.on(
+      'message:voice',
+      withErrorHandling(async (data: VoiceMessageData) => {
         const { conversationId, audioUrl, audioDuration } = data;
 
-        if (!socket.userId) {
-          socket.emit('error', { message: 'Not authenticated' });
-          return;
+        requireAuth();
+        if (socket.currentConversationId !== conversationId) {
+          throw new Error('Rejoignez la conversation avant d’envoyer un message');
         }
+
+        enforceSocketRateLimit();
 
         const message = await MessageService.sendVoiceMessage(
           conversationId,
-          socket.userId,
+          socket.userId!,
           audioUrl,
           audioDuration
         );
@@ -128,28 +195,36 @@ export const setupSocketHandlers = (io: Server) => {
         });
 
         console.log(`Voice message sent in conversation ${conversationId}`);
-      } catch (error) {
-        if (error instanceof Error) {
-          socket.emit('error', { message: error.message });
+      })
+    );
+
+    socket.on(
+      'typing:start',
+      withErrorHandling((data: TypingData) => {
+        const { conversationId } = data;
+        if (socket.currentConversationId !== conversationId) {
+          return;
         }
-      }
-    });
+        socket.to(conversationId).emit('typing:user', {
+          userId: socket.userId,
+          isTyping: true,
+        });
+      })
+    );
 
-    socket.on('typing:start', (data: TypingData) => {
-      const { conversationId } = data;
-      socket.to(conversationId).emit('typing:user', {
-        userId: socket.userId,
-        isTyping: true,
-      });
-    });
-
-    socket.on('typing:stop', (data: TypingData) => {
-      const { conversationId } = data;
-      socket.to(conversationId).emit('typing:user', {
-        userId: socket.userId,
-        isTyping: false,
-      });
-    });
+    socket.on(
+      'typing:stop',
+      withErrorHandling((data: TypingData) => {
+        const { conversationId } = data;
+        if (socket.currentConversationId !== conversationId) {
+          return;
+        }
+        socket.to(conversationId).emit('typing:user', {
+          userId: socket.userId,
+          isTyping: false,
+        });
+      })
+    );
 
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id} (User: ${socket.userId})`);
