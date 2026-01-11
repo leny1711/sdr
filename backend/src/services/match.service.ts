@@ -49,7 +49,7 @@ export class MatchService {
     const formattedMatches = matches.map((match) => {
       const otherUser = match.user1Id === userId ? match.user2 : match.user1;
       const textMessageCount = match.conversation?.textMessageCount ?? 0;
-      const revealLevel = computeRevealLevel(textMessageCount);
+      const revealLevel = match.conversation?.revealLevel ?? computeRevealLevel(textMessageCount);
       const conversation = match.conversation
         ? { ...match.conversation, revealLevel, textMessageCount }
         : match.conversation;

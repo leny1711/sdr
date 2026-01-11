@@ -1,5 +1,7 @@
 import { ChapterNumber, RevealLevel } from '../types';
 
+export const CHAPTER_THRESHOLDS: number[] = [0, 10, 25, 50, 80];
+
 type WithPhoto = {
   photoUrl?: string | null;
 };
@@ -11,24 +13,25 @@ export const normalizePhotoUrl = (value?: string | null): string | null => {
 };
 
 export const computeChapterFromMessageCount = (messageCount: number): ChapterNumber => {
-  if (messageCount >= 50) return 3;
-  if (messageCount >= 25) return 2;
-  if (messageCount >= 10) return 1;
+  if (messageCount >= CHAPTER_THRESHOLDS[4]) return 4;
+  if (messageCount >= CHAPTER_THRESHOLDS[3]) return 3;
+  if (messageCount >= CHAPTER_THRESHOLDS[2]) return 2;
+  if (messageCount >= CHAPTER_THRESHOLDS[1]) return 1;
   return 0;
 };
 
 export const computeRevealLevel = (textMessageCount: number): RevealLevel => {
-  if (textMessageCount >= 50) return 3;
-  if (textMessageCount >= 25) return 2;
-  if (textMessageCount >= 10) return 1;
+  if (textMessageCount >= CHAPTER_THRESHOLDS[4]) return 4;
+  if (textMessageCount >= CHAPTER_THRESHOLDS[3]) return 3;
+  if (textMessageCount >= CHAPTER_THRESHOLDS[2]) return 2;
+  if (textMessageCount >= CHAPTER_THRESHOLDS[1]) return 1;
   return 0;
 };
 
-export const applyRevealToUser = <T extends WithPhoto>(user: T, revealLevel: number) => {
+export const applyRevealToUser = <T extends WithPhoto>(user: T, _revealLevel: number) => {
   const normalizedPhoto = normalizePhotoUrl(user.photoUrl);
 
-  const canRevealPhoto = revealLevel > 0;
-  const photoHidden = !normalizedPhoto || !canRevealPhoto;
+  const photoHidden = !normalizedPhoto;
 
   return {
     ...user,
@@ -47,6 +50,8 @@ export const getChapterSystemLabel = (chapter: ChapterNumber) => {
       return 'Chapitre 2 — La découverte';
     case 3:
       return 'Chapitre 3 — La connexion';
+    case 4:
+      return 'Chapitre 4 — Révélation';
     default:
       return 'Chapitre 4 — Révélation';
   }

@@ -11,6 +11,10 @@ import {
 import { Colors } from '../constants/theme';
 import { getPhotoEffects } from '../utils/reveal';
 
+const OBSCURE_MIN_BLUR = 18;
+const OBSCURE_MAX_OPACITY = 0.9;
+const OBSCURE_OVERLAY_COLOR = 'rgba(0,0,0,0.32)';
+
 type RevealPhotoProps = {
   photoUrl?: string | null;
   revealLevel: number;
@@ -39,6 +43,16 @@ const RevealPhoto = ({
   const radiusStyle = borderRadius !== undefined ? { borderRadius } : undefined;
 
   const effects = getPhotoEffects(revealLevel);
+  const shouldObscure = _photoHidden === true;
+  const effectiveEffects = shouldObscure
+    ? {
+        ...effects,
+        blurRadius: Math.max(effects.blurRadius ?? 0, OBSCURE_MIN_BLUR),
+        grayscale: true,
+        imageOpacity: Math.min(effects.imageOpacity ?? 1, OBSCURE_MAX_OPACITY),
+        overlayColor: effects.overlayColor ?? OBSCURE_OVERLAY_COLOR,
+      }
+    : effects;
 
   return (
     <View style={[styles.container, radiusStyle, containerStyle]}>
@@ -49,15 +63,25 @@ const RevealPhoto = ({
             style={[
               styles.image,
               radiusStyle,
-              effects.grayscale && Platform.OS === 'web' ? styles.grayscaleImageWeb : undefined,
+              effectiveEffects.grayscale && Platform.OS === 'web' ? styles.grayscaleImageWeb : undefined,
               imageStyle,
-              effects.imageOpacity !== undefined ? { opacity: effects.imageOpacity } : undefined,
+              effectiveEffects.imageOpacity !== undefined ? { opacity: effectiveEffects.imageOpacity } : undefined,
             ]}
-            blurRadius={effects.blurRadius}
+            blurRadius={effectiveEffects.blurRadius}
             onError={() => setLoadError(true)}
           />
-          {effects.grayscale && Platform.OS !== 'web' && (
-            <View pointerEvents="none" style={[styles.grayscaleTint, radiusStyle]} />
+          {effectiveEffects.grayscale && Platform.OS !== 'web' && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.grayscaleTint,
+                radiusStyle,
+                effectiveEffects.overlayColor ? { backgroundColor: effectiveEffects.overlayColor } : undefined,
+              ]}
+            />
+          )}
+          {effectiveEffects.overlayColor && !effectiveEffects.grayscale && (
+            <View pointerEvents="none" style={[styles.overlay, radiusStyle, { backgroundColor: effectiveEffects.overlayColor }]} />
           )}
         </>
       ) : (
@@ -87,6 +111,9 @@ const styles = StyleSheet.create({
   grayscaleTint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   placeholder: {
     ...StyleSheet.absoluteFillObject,
