@@ -30,7 +30,7 @@ export class ConversationController {
       const userId = req.user!.userId;
       const { conversationId } = req.params;
       const limit = parseInt(req.query.limit as string) || 50;
-      const cursor = (req.query.cursor as string) || (req.query.before as string);
+      const cursor = req.query.cursor as string;
 
       const { messages, nextCursor } = await ConversationService.getMessages(conversationId, userId, limit, cursor);
 
