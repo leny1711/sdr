@@ -49,6 +49,11 @@ export interface Message {
   sender?: User;
 }
 
+export interface MessagePage {
+  messages: Message[];
+  nextCursor: string | null;
+}
+
 export interface MessageEnvelope {
   message: Message;
   revealLevel: number;

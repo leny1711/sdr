@@ -68,6 +68,11 @@ export interface Message {
   sender?: User;
 }
 
+export interface MessagePage {
+  messages: Message[];
+  nextCursor: string | null;
+}
+
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
   otherUser: User;

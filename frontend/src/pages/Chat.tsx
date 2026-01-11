@@ -12,8 +12,10 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | undefined>(undefined);
   const { user } = useAuth();
@@ -32,15 +34,49 @@ const Chat: React.FC = () => {
 
     try {
       setLoading(true);
-      const data = await conversationAPI.getConversation(conversationId);
-      setConversation(data);
-      setMessages(data.messages);
+      const [conversationData, messagePage] = await Promise.all([
+        conversationAPI.getConversation(conversationId),
+        conversationAPI.getMessages(conversationId),
+      ]);
+      setConversation(conversationData);
+      if (messagePage?.messages) {
+        setMessages(messagePage.messages);
+        setNextCursor(messagePage.nextCursor ?? null);
+      } else {
+        setMessages([]);
+        setNextCursor(null);
+      }
     } catch (error) {
       console.error('Failed to load conversation:', error);
+      setNextCursor(null);
     } finally {
       setLoading(false);
     }
   }, [conversationId]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!conversationId || !nextCursor || loadingOlder) return;
+
+    try {
+      setLoadingOlder(true);
+      const page = await conversationAPI.getMessages(conversationId, nextCursor);
+      if (page?.messages?.length) {
+        setMessages((prev) => {
+          const merged = [...page.messages, ...prev];
+          const map = new Map<string, Message>();
+          merged.forEach((msg) => map.set(msg.id, msg));
+          return Array.from(map.values()).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        });
+      }
+      setNextCursor(page?.nextCursor ?? null);
+    } catch (error) {
+      console.error('Failed to load older messages:', error);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [conversationId, nextCursor, loadingOlder]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -87,8 +123,10 @@ const Chat: React.FC = () => {
   }, [conversationId, user?.id, loadConversation, calculateRevealLevel]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!loadingOlder) {
+      scrollToBottom();
+    }
+  }, [messages, loadingOlder]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -185,6 +223,13 @@ const Chat: React.FC = () => {
           </div>
         ) : (
           <div className={styles.messagesList}>
+            {nextCursor && (
+              <div className={styles.loadMore}>
+                <button onClick={loadOlderMessages} disabled={loadingOlder} className="secondary">
+                  {loadingOlder ? 'Loading previous messages...' : 'Load previous messages'}
+                </button>
+              </div>
+            )}
             {messages.map((message) => (
               <div
                 key={message.id}

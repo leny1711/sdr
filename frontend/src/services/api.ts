@@ -1,12 +1,13 @@
 import axios from 'axios';
-import type { 
-  AuthResponse, 
-  LoginData, 
-  RegisterData, 
-  User, 
+import type {
+  AuthResponse,
+  LoginData,
+  RegisterData,
+  User,
   Match,
   ConversationWithMessages,
-  Message
+  Message,
+  MessagePage,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -99,8 +100,13 @@ export const conversationAPI = {
     return response.data.data;
   },
 
-  getMessages: async (conversationId: string): Promise<Message[]> => {
-    const response = await api.get(`/api/conversations/${conversationId}/messages`);
+  getMessages: async (conversationId: string, cursor?: string, limit: number = 50): Promise<MessagePage> => {
+    const response = await api.get(`/api/conversations/${conversationId}/messages`, {
+      params: {
+        limit,
+        ...(cursor ? { cursor } : {}),
+      },
+    });
     return response.data.data;
   },
 };
