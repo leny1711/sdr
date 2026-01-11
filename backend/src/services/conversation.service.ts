@@ -104,8 +104,9 @@ export class ConversationService {
       take: safeLimit,
     });
 
+    const oldestMessage = messages.length > 0 ? messages[messages.length - 1] : undefined;
     const orderedMessages = messages.reverse();
-    const nextCursor = orderedMessages.length > 0 ? orderedMessages[0].createdAt.toISOString() : null;
+    const nextCursor = oldestMessage ? oldestMessage.createdAt.toISOString() : null;
 
     return {
       messages: orderedMessages,
