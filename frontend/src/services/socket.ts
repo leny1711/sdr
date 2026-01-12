@@ -3,6 +3,15 @@ import type { Message } from '../types';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+export interface SocketMessageEnvelope {
+  conversationId?: string;
+  message: Message;
+  revealLevel?: number;
+  textMessageCount?: number;
+  chapterChanged?: boolean;
+  chapter?: number | null;
+}
+
 class SocketService {
   private socket: Socket | null = null;
 
@@ -58,7 +67,7 @@ class SocketService {
     this.socket?.on('conversation:joined', callback);
   }
 
-  onNewMessage(callback: (payload: { message: Message; revealLevel?: number } | Message) => void) {
+  onNewMessage(callback: (payload: SocketMessageEnvelope) => void) {
     this.socket?.on('message:new', callback);
   }
 

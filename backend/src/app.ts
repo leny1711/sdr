@@ -2,7 +2,6 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { config } from './config/env';
-import { rateLimiter } from './middlewares/rateLimit.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 
 import authRoutes from './routes/auth.routes';
@@ -27,8 +26,6 @@ export const createApp = (): Application => {
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-  app.use(rateLimiter);
 
   app.use('/uploads', express.static(path.join(__dirname, '..', config.storagePath)));
 

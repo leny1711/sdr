@@ -212,6 +212,10 @@ const ChatScreen = () => {
       return;
     }
 
+    setMessages([]);
+    setConversation(null);
+    setNextCursor(null);
+
     loadConversation();
     loadMessages();
 
@@ -255,17 +259,14 @@ const ChatScreen = () => {
     if (!conversationId) return;
     try {
       setIsLoading(true);
-      setNextCursor(null);
       const data = await apiService.getMessages(conversationId);
       if (data && Array.isArray(data.messages)) {
-        const deduped = dedupeMessages(data.messages);
-        setMessages(deduped);
+        setMessages((prev) => dedupeMessages([...prev, ...data.messages]));
         setNextCursor(data.nextCursor ?? null);
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
-        setMessages([]);
-        setNextCursor(null);
+        setNextCursor(data?.nextCursor ?? null);
       }
     } catch (error: any) {
       Alert.alert('Erreur', 'Impossible de charger les messages.');
