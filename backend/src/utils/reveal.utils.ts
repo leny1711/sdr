@@ -1,6 +1,6 @@
 import { ChapterNumber, RevealLevel } from '../types';
 
-export const CHAPTER_THRESHOLDS: number[] = [0, 10, 25, 50, 80];
+export const CHAPTER_THRESHOLDS: number[] = [0, 10, 30, 50, 80];
 
 type WithPhoto = {
   photoUrl?: string | null;

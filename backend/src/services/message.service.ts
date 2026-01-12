@@ -1,7 +1,15 @@
 import prisma from '../config/database';
 import { MessageType } from '@prisma/client';
-import { ChapterNumber, MessageEnvelope, RevealLevel, SystemMessagePayload } from '../types';
+import { MessageEnvelope, RevealLevel, SystemMessagePayload } from '../types';
 import { CHAPTER_THRESHOLDS, getChapterSystemLabel } from '../utils/reveal.utils';
+
+type UnlockableChapter = 1 | 2 | 3 | 4;
+const THRESHOLD_BY_CHAPTER: Record<UnlockableChapter, number> = {
+  1: CHAPTER_THRESHOLDS[1],
+  2: CHAPTER_THRESHOLDS[2],
+  3: CHAPTER_THRESHOLDS[3],
+  4: CHAPTER_THRESHOLDS[4],
+};
 
 export class MessageService {
   private static conversationLocks = new Map<string, Promise<void>>();
@@ -81,16 +89,20 @@ export class MessageService {
         const nextCount = (conversation.textMessageCount ?? 0) + 1;
         let revealLevel = (conversation.revealLevel ?? 0) as RevealLevel;
         let chapterChanged = false;
-        let unlockedChapter: ChapterNumber | null = null;
+        let unlockedChapter: UnlockableChapter | null = null;
 
         // Step 3: unlock the next chapter once when crossing the threshold; stop all logic after chapter 4
-        if (revealLevel < 4) {
-          const candidateChapter = (revealLevel + 1) as ChapterNumber;
-          const threshold = CHAPTER_THRESHOLDS[candidateChapter] ?? Number.MAX_SAFE_INTEGER;
+        const nextChapterCandidate = revealLevel < 4 ? revealLevel + 1 : null;
+        const nextChapter: UnlockableChapter | null =
+          nextChapterCandidate && nextChapterCandidate <= 4
+            ? (nextChapterCandidate as UnlockableChapter)
+            : null;
+        if (nextChapter) {
+          const threshold = THRESHOLD_BY_CHAPTER[nextChapter];
           if (nextCount >= threshold) {
-            revealLevel = candidateChapter as RevealLevel;
+            revealLevel = nextChapter;
             chapterChanged = true;
-            unlockedChapter = candidateChapter;
+            unlockedChapter = nextChapter;
           }
         }
 
@@ -98,15 +110,29 @@ export class MessageService {
           textMessageCount: nextCount,
         };
 
-        if (chapterChanged && unlockedChapter !== null) {
+        if (chapterChanged && unlockedChapter) {
           updateData.revealLevel = revealLevel;
-          const chapterKey = `chapter${unlockedChapter}UnlockedAt` as const;
-          const alreadyUnlocked = (conversation as Record<string, Date | null | unknown>)[chapterKey] as
-            | Date
-            | null
-            | undefined;
-          if (!alreadyUnlocked) {
-            updateData[chapterKey] = unlockTime;
+          switch (unlockedChapter) {
+            case 1:
+              if (!conversation.chapter1UnlockedAt) {
+                updateData.chapter1UnlockedAt = unlockTime;
+              }
+              break;
+            case 2:
+              if (!conversation.chapter2UnlockedAt) {
+                updateData.chapter2UnlockedAt = unlockTime;
+              }
+              break;
+            case 3:
+              if (!conversation.chapter3UnlockedAt) {
+                updateData.chapter3UnlockedAt = unlockTime;
+              }
+              break;
+            case 4:
+              if (!conversation.chapter4UnlockedAt) {
+                updateData.chapter4UnlockedAt = unlockTime;
+              }
+              break;
           }
         }
 
