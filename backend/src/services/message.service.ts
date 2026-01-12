@@ -1,5 +1,5 @@
 import prisma from '../config/database';
-import { MessageType } from '@prisma/client';
+import { MessageType, Prisma } from '@prisma/client';
 import { ChapterNumber, MessageEnvelope, RevealLevel, SystemMessagePayload } from '../types';
 import { getChapterSystemLabel } from '../utils/reveal.utils';
 
@@ -35,19 +35,6 @@ export class MessageService {
     }
   }
 
-  private static getUnlockField(chapter: ChapterNumber) {
-    switch (chapter) {
-      case 1:
-        return 'chapter1UnlockedAt' as const;
-      case 2:
-        return 'chapter2UnlockedAt' as const;
-      case 3:
-        return 'chapter3UnlockedAt' as const;
-      default:
-        return 'chapter4UnlockedAt' as const;
-    }
-  }
-
   private static async enforceRateLimit(conversationId: string) {
     const now = Date.now();
     const last = this.lastMessageTimestamps.get(conversationId) ?? 0;
@@ -61,126 +48,136 @@ export class MessageService {
   static async sendTextMessage(conversationId: string, senderId: string, content: string): Promise<MessageEnvelope> {
     return this.withConversationLock(conversationId, async () => {
       await this.enforceRateLimit(conversationId);
-      const message = await prisma.message.create({
-        data: {
-          conversationId,
-          senderId,
-          type: MessageType.TEXT,
-          content,
-        },
-        include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      });
-
-      const updatedConversation = await prisma.conversation.update({
-        where: { id: conversationId },
-        data: {
-          textMessageCount: {
-            increment: 1,
-          },
-        },
-        select: {
-          textMessageCount: true,
-          revealLevel: true,
-          chapter1UnlockedAt: true,
-          chapter2UnlockedAt: true,
-          chapter3UnlockedAt: true,
-          chapter4UnlockedAt: true,
-          user1Id: true,
-          user2Id: true,
-        },
-      });
-
-      if (updatedConversation.user1Id !== senderId && updatedConversation.user2Id !== senderId) {
-        throw new Error('Unauthorized access to conversation');
-      }
-
-      const textMessageCount = updatedConversation.textMessageCount;
-      const resolveChapterFromCount = (count: number): ChapterNumber => {
-        if (count >= 80) return 4;
-        if (count >= 50) return 3;
-        if (count >= 30) return 2;
-        if (count >= 10) return 1;
-        return 0;
-      };
-      type UnlockField = ReturnType<typeof MessageService.getUnlockField>;
-      const nextChapter = resolveChapterFromCount(textMessageCount);
-      const currentRevealLevel = MessageService.clampChapterNumber(updatedConversation.revealLevel ?? 0);
-      const unlockField = nextChapter > 0 ? MessageService.getUnlockField(nextChapter) : undefined;
-      const unlockedAt: Date | null | undefined = unlockField ? updatedConversation[unlockField] : undefined;
-      const alreadyUnlocked = unlockField ? Boolean(unlockedAt) : true;
-      const chapterChanged = Boolean(nextChapter && !alreadyUnlocked && nextChapter > currentRevealLevel);
-
-      let finalRevealLevel: RevealLevel = MessageService.clampChapterNumber(
-        Math.max(currentRevealLevel, resolveChapterFromCount(textMessageCount))
-      );
-      let systemMessage: SystemMessagePayload | undefined;
-
-      if (chapterChanged && unlockField) {
-        const unlockTime = new Date(message.createdAt.getTime() + 1);
-        const progressionData: { revealLevel: number } & Partial<Record<UnlockField, Date>> = {
-          revealLevel: nextChapter,
-        };
-        if (unlockedAt == null) {
-          progressionData[unlockField] = unlockTime;
-        }
-
-        const progression = await prisma.conversation.update({
-          where: { id: conversationId },
-          data: progressionData,
-          select: {
-            revealLevel: true,
-            user1Id: true,
-          },
-        });
-
-        finalRevealLevel = MessageService.clampChapterNumber(progression.revealLevel as RevealLevel);
-
-        const createdSystemMessage = await prisma.message.create({
+      const result = await prisma.$transaction(async (tx) => {
+        const message = await tx.message.create({
           data: {
             conversationId,
-            senderId: progression.user1Id,
-            type: MessageType.SYSTEM,
-            content: getChapterSystemLabel(nextChapter),
-            createdAt: unlockTime,
-          },
-          include: {
-            sender: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+            senderId,
+            type: MessageType.TEXT,
+            content,
           },
         });
 
-        systemMessage = {
-          id: createdSystemMessage.id,
-          conversationId,
-          senderId: createdSystemMessage.senderId,
-          type: 'SYSTEM',
-          content: createdSystemMessage.content ?? getChapterSystemLabel(nextChapter),
-          createdAt:
-            createdSystemMessage.createdAt instanceof Date
-              ? createdSystemMessage.createdAt.toISOString()
-              : createdSystemMessage.createdAt,
-        };
-      }
+        const unlockTime =
+          message.createdAt instanceof Date ? message.createdAt : new Date(message.createdAt as unknown as string);
 
-      return {
-        message,
-        revealLevel: finalRevealLevel,
-        textMessageCount,
-        chapter: nextChapter,
-        chapterChanged,
-        systemMessage,
-      };
+        const updatedRows = await tx.$queryRaw<
+          Array<{
+            textMessageCount: number;
+            revealLevel: number;
+            chapter1UnlockedAt: Date | null;
+            chapter2UnlockedAt: Date | null;
+            chapter3UnlockedAt: Date | null;
+            chapter4UnlockedAt: Date | null;
+            user1Id: string;
+            user2Id: string;
+            chapter: number;
+            chapterChanged: boolean;
+          }>
+        >(Prisma.sql`
+          WITH pre AS (
+            SELECT
+              "id",
+              "textMessageCount",
+              "revealLevel",
+              "chapter1UnlockedAt",
+              "chapter2UnlockedAt",
+              "chapter3UnlockedAt",
+              "chapter4UnlockedAt",
+              "user1Id",
+              "user2Id"
+            FROM "Conversation"
+            WHERE "id" = ${conversationId}
+            FOR UPDATE
+          ),
+          calc AS (
+            SELECT
+              pre."id",
+              pre."textMessageCount" + 1 AS new_count,
+              CASE
+                WHEN pre."textMessageCount" + 1 >= 80 THEN 4
+                WHEN pre."textMessageCount" + 1 >= 50 THEN 3
+                WHEN pre."textMessageCount" + 1 >= 30 THEN 2
+                WHEN pre."textMessageCount" + 1 >= 10 THEN 1
+                ELSE 0
+              END AS new_chapter
+            FROM pre
+          )
+          UPDATE "Conversation" AS c
+          SET
+            "textMessageCount" = calc.new_count,
+            "revealLevel" = CASE
+              WHEN calc.new_chapter > pre."revealLevel" THEN calc.new_chapter
+              ELSE pre."revealLevel"
+            END,
+            "chapter1UnlockedAt" = CASE
+              WHEN calc.new_chapter = 1 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter1UnlockedAt", ${unlockTime})
+              ELSE pre."chapter1UnlockedAt"
+            END,
+            "chapter2UnlockedAt" = CASE
+              WHEN calc.new_chapter = 2 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter2UnlockedAt", ${unlockTime})
+              ELSE pre."chapter2UnlockedAt"
+            END,
+            "chapter3UnlockedAt" = CASE
+              WHEN calc.new_chapter = 3 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter3UnlockedAt", ${unlockTime})
+              ELSE pre."chapter3UnlockedAt"
+            END,
+            "chapter4UnlockedAt" = CASE
+              WHEN calc.new_chapter = 4 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter4UnlockedAt", ${unlockTime})
+              ELSE pre."chapter4UnlockedAt"
+            END
+          FROM pre
+          JOIN calc ON calc."id" = pre."id"
+          WHERE c."id" = pre."id"
+          RETURNING
+            c."textMessageCount",
+            c."revealLevel",
+            c."chapter1UnlockedAt",
+            c."chapter2UnlockedAt",
+            c."chapter3UnlockedAt",
+            c."chapter4UnlockedAt",
+            pre."user1Id",
+            pre."user2Id",
+            calc.new_chapter AS "chapter",
+            (calc.new_chapter > pre."revealLevel") AS "chapterChanged"
+        `);
+
+        const updatedConversation = updatedRows[0];
+
+        if (!updatedConversation) {
+          throw new Error('Conversation introuvable');
+        }
+
+        if (updatedConversation.user1Id !== senderId && updatedConversation.user2Id !== senderId) {
+          throw new Error('Unauthorized access to conversation');
+        }
+
+        const chapter = MessageService.clampChapterNumber(updatedConversation.chapter ?? 0);
+        const finalRevealLevel = MessageService.clampChapterNumber(updatedConversation.revealLevel ?? 0) as RevealLevel;
+        const chapterChanged = Boolean(updatedConversation.chapterChanged);
+
+        const systemMessage: SystemMessagePayload | undefined = chapterChanged
+          ? {
+              id: `${message.id}-chapter-${chapter}`,
+              conversationId,
+              senderId: updatedConversation.user1Id,
+              type: 'SYSTEM',
+              content: getChapterSystemLabel(chapter),
+              createdAt: unlockTime.toISOString(),
+            }
+          : undefined;
+
+        return {
+          message,
+          textMessageCount: updatedConversation.textMessageCount,
+          revealLevel: finalRevealLevel,
+          chapter,
+          chapterChanged,
+          systemMessage,
+        };
+      });
+
+      return result;
     });
   }
 
