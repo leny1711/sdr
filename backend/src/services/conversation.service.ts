@@ -1,5 +1,5 @@
 import prisma from '../config/database';
-import { applyRevealToUser, computeRevealLevel, normalizePhotoUrl } from '../utils/reveal.utils';
+import { applyRevealToUser, normalizePhotoUrl } from '../utils/reveal.utils';
 
 export class ConversationService {
   static async getConversation(userId: string, conversationId: string) {
@@ -41,7 +41,7 @@ export class ConversationService {
       throw new Error('Accès non autorisé à cette conversation');
     }
 
-    const revealLevel = conversation.revealLevel ?? computeRevealLevel(conversation.textMessageCount);
+    const revealLevel = (conversation.revealLevel ?? 0);
     const otherUser = applyRevealToUser(
       conversation.user1Id === userId ? conversation.user2 : conversation.user1,
       revealLevel
@@ -116,19 +116,4 @@ export class ConversationService {
     };
   }
 
-  static calculateRevealLevel(textMessageCount: number): number {
-    return computeRevealLevel(textMessageCount);
-  }
-
-  static async updateRevealLevel(conversationId: string) {
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
-    });
-
-    if (!conversation) {
-      throw new Error('Conversation not found');
-    }
-
-    return conversation.revealLevel ?? this.calculateRevealLevel(conversation.textMessageCount);
-  }
 }

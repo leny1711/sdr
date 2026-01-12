@@ -2,14 +2,11 @@ import { Server, Socket } from 'socket.io';
 import { AuthService } from '../services/auth.service';
 import { MessageService } from '../services/message.service';
 import { ConversationService } from '../services/conversation.service';
-
-const MESSAGE_RATE_LIMIT_MS = 400;
 const MAX_MESSAGE_LENGTH = 1000;
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
   currentConversationId?: string;
-  lastMessageAt?: number;
 }
 
 interface JoinRoomData {
@@ -85,15 +82,6 @@ export const setupSocketHandlers = (io: Server) => {
       socket.join(conversationId);
     };
 
-    const enforceSocketRateLimit = () => {
-      const now = Date.now();
-      const elapsed = socket.lastMessageAt ? now - socket.lastMessageAt : undefined;
-      if (elapsed !== undefined && elapsed < MESSAGE_RATE_LIMIT_MS) {
-        throw new Error('Envoi du message impossible. Merci de patienter quelques instants.');
-      }
-      socket.lastMessageAt = now;
-    };
-
     console.log(`Client connected: ${socket.id} (User: ${socket.userId})`);
 
     socket.on(
@@ -157,8 +145,6 @@ export const setupSocketHandlers = (io: Server) => {
           throw new Error('Message trop long');
         }
 
-        enforceSocketRateLimit();
-
         const result = await MessageService.sendTextMessage(conversationId, socket.userId!, sanitizedContent);
         const systemMessage = result.systemMessage;
         // MessageService exposes chapterChanged when progression occurs; use it directly to drive unlock notifications
@@ -166,6 +152,7 @@ export const setupSocketHandlers = (io: Server) => {
 
         const revealLevel = result.revealLevel ?? null;
 
+        // Forward backend-computed payload as-is; no recalculation here to avoid duplicate work on the frontend
         io.to(conversationId).emit('message:new', {
           message: result.message,
           revealLevel,
@@ -212,8 +199,6 @@ export const setupSocketHandlers = (io: Server) => {
         if (!audioDuration || audioDuration <= 0) {
           throw new Error('Durée audio invalide');
         }
-
-        enforceSocketRateLimit();
 
         const message = await MessageService.sendVoiceMessage(
           conversationId,

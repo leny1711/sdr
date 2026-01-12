@@ -27,7 +27,7 @@ export interface MessageEnvelope {
   message: any;
   revealLevel: RevealLevel;
   textMessageCount: number;
-  chapter: ChapterNumber;
+  chapter: ChapterNumber | null;
   chapterChanged: boolean;
   systemMessage?: SystemMessagePayload;
 }
