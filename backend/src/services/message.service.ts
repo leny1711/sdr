@@ -1,20 +1,12 @@
 import prisma from '../config/database';
-import { MessageType, Prisma } from '@prisma/client';
+import { MessageType } from '@prisma/client';
 import { ChapterNumber, MessageEnvelope, RevealLevel, SystemMessagePayload } from '../types';
-import { getChapterSystemLabel } from '../utils/reveal.utils';
+import { CHAPTER_THRESHOLDS, getChapterSystemLabel } from '../utils/reveal.utils';
 
 export class MessageService {
   private static conversationLocks = new Map<string, Promise<void>>();
   private static lastMessageTimestamps = new Map<string, number>();
   private static readonly MIN_MESSAGE_INTERVAL_MS = 400;
-
-  private static clampChapterNumber(value: number): ChapterNumber {
-    if (value >= 4) return 4;
-    if (value >= 3) return 3;
-    if (value >= 2) return 2;
-    if (value >= 1) return 1;
-    return 0;
-  }
 
   private static async withConversationLock<T>(conversationId: string, task: () => Promise<T>): Promise<T> {
     const previous = this.conversationLocks.get(conversationId) ?? Promise.resolve();
@@ -49,6 +41,30 @@ export class MessageService {
     return this.withConversationLock(conversationId, async () => {
       await this.enforceRateLimit(conversationId);
       const result = await prisma.$transaction(async (tx) => {
+        const conversation = await tx.conversation.findUnique({
+          where: { id: conversationId },
+          select: {
+            id: true,
+            user1Id: true,
+            user2Id: true,
+            textMessageCount: true,
+            revealLevel: true,
+            chapter1UnlockedAt: true,
+            chapter2UnlockedAt: true,
+            chapter3UnlockedAt: true,
+            chapter4UnlockedAt: true,
+          },
+        });
+
+        if (!conversation) {
+          throw new Error('Conversation introuvable');
+        }
+
+        if (conversation.user1Id !== senderId && conversation.user2Id !== senderId) {
+          throw new Error('Unauthorized access to conversation');
+        }
+
+        // Step 1: insert the new message
         const message = await tx.message.create({
           data: {
             conversationId,
@@ -61,117 +77,60 @@ export class MessageService {
         const unlockTime =
           message.createdAt instanceof Date ? message.createdAt : new Date(message.createdAt as unknown as string);
 
-        const updatedRows = await tx.$queryRaw<
-          Array<{
-            textMessageCount: number;
-            revealLevel: number;
-            chapter1UnlockedAt: Date | null;
-            chapter2UnlockedAt: Date | null;
-            chapter3UnlockedAt: Date | null;
-            chapter4UnlockedAt: Date | null;
-            user1Id: string;
-            user2Id: string;
-            chapter: number;
-            chapterChanged: boolean;
-          }>
-        >(Prisma.sql`
-          WITH pre AS (
-            SELECT
-              "id",
-              "textMessageCount",
-              "revealLevel",
-              "chapter1UnlockedAt",
-              "chapter2UnlockedAt",
-              "chapter3UnlockedAt",
-              "chapter4UnlockedAt",
-              "user1Id",
-              "user2Id"
-            FROM "Conversation"
-            WHERE "id" = ${conversationId}
-            FOR UPDATE
-          ),
-          calc AS (
-            SELECT
-              pre."id",
-              pre."textMessageCount" + 1 AS new_count,
-              CASE
-                WHEN pre."textMessageCount" + 1 >= 80 THEN 4
-                WHEN pre."textMessageCount" + 1 >= 50 THEN 3
-                WHEN pre."textMessageCount" + 1 >= 30 THEN 2
-                WHEN pre."textMessageCount" + 1 >= 10 THEN 1
-                ELSE 0
-              END AS new_chapter
-            FROM pre
-          )
-          UPDATE "Conversation" AS c
-          SET
-            "textMessageCount" = calc.new_count,
-            "revealLevel" = CASE
-              WHEN calc.new_chapter > pre."revealLevel" THEN calc.new_chapter
-              ELSE pre."revealLevel"
-            END,
-            "chapter1UnlockedAt" = CASE
-              WHEN calc.new_chapter = 1 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter1UnlockedAt", ${unlockTime})
-              ELSE pre."chapter1UnlockedAt"
-            END,
-            "chapter2UnlockedAt" = CASE
-              WHEN calc.new_chapter = 2 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter2UnlockedAt", ${unlockTime})
-              ELSE pre."chapter2UnlockedAt"
-            END,
-            "chapter3UnlockedAt" = CASE
-              WHEN calc.new_chapter = 3 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter3UnlockedAt", ${unlockTime})
-              ELSE pre."chapter3UnlockedAt"
-            END,
-            "chapter4UnlockedAt" = CASE
-              WHEN calc.new_chapter = 4 AND calc.new_chapter > pre."revealLevel" THEN COALESCE(pre."chapter4UnlockedAt", ${unlockTime})
-              ELSE pre."chapter4UnlockedAt"
-            END
-          FROM pre
-          JOIN calc ON calc."id" = pre."id"
-          WHERE c."id" = pre."id"
-          RETURNING
-            c."textMessageCount",
-            c."revealLevel",
-            c."chapter1UnlockedAt",
-            c."chapter2UnlockedAt",
-            c."chapter3UnlockedAt",
-            c."chapter4UnlockedAt",
-            pre."user1Id",
-            pre."user2Id",
-            calc.new_chapter AS "chapter",
-            (calc.new_chapter > pre."revealLevel") AS "chapterChanged"
-        `);
+        // Step 2: increment message count
+        const nextCount = (conversation.textMessageCount ?? 0) + 1;
+        let revealLevel = (conversation.revealLevel ?? 0) as RevealLevel;
+        let chapterChanged = false;
+        let unlockedChapter: ChapterNumber | null = null;
 
-        const updatedConversation = updatedRows[0];
-
-        if (!updatedConversation) {
-          throw new Error('Conversation introuvable');
+        // Step 3: unlock the next chapter once when crossing the threshold; stop all logic after chapter 4
+        if (revealLevel < 4) {
+          const candidateChapter = (revealLevel + 1) as ChapterNumber;
+          const threshold = CHAPTER_THRESHOLDS[candidateChapter] ?? Number.MAX_SAFE_INTEGER;
+          if (nextCount >= threshold) {
+            revealLevel = candidateChapter as RevealLevel;
+            chapterChanged = true;
+            unlockedChapter = candidateChapter;
+          }
         }
 
-        if (updatedConversation.user1Id !== senderId && updatedConversation.user2Id !== senderId) {
-          throw new Error('Unauthorized access to conversation');
+        const updateData: Record<string, unknown> = {
+          textMessageCount: nextCount,
+        };
+
+        if (chapterChanged && unlockedChapter !== null) {
+          updateData.revealLevel = revealLevel;
+          const chapterKey = `chapter${unlockedChapter}UnlockedAt` as const;
+          const alreadyUnlocked = (conversation as Record<string, Date | null | unknown>)[chapterKey] as
+            | Date
+            | null
+            | undefined;
+          if (!alreadyUnlocked) {
+            updateData[chapterKey] = unlockTime;
+          }
         }
 
-        const chapter = MessageService.clampChapterNumber(updatedConversation.chapter ?? 0);
-        const finalRevealLevel = MessageService.clampChapterNumber(updatedConversation.revealLevel ?? 0) as RevealLevel;
-        const chapterChanged = Boolean(updatedConversation.chapterChanged);
+        await tx.conversation.update({
+          where: { id: conversationId },
+          data: updateData,
+        });
 
-        const systemMessage: SystemMessagePayload | undefined = chapterChanged
+        const systemMessage: SystemMessagePayload | undefined = chapterChanged && unlockedChapter !== null
           ? {
-              id: `${message.id}-chapter-${chapter}`,
+              id: `${message.id}-chapter-${unlockedChapter}`,
               conversationId,
-              senderId: updatedConversation.user1Id,
+              senderId: conversation.user1Id,
               type: 'SYSTEM',
-              content: getChapterSystemLabel(chapter),
+              content: getChapterSystemLabel(unlockedChapter),
               createdAt: unlockTime.toISOString(),
             }
           : undefined;
 
         return {
           message,
-          textMessageCount: updatedConversation.textMessageCount,
-          revealLevel: finalRevealLevel,
-          chapter,
+          textMessageCount: nextCount,
+          revealLevel,
+          chapter: unlockedChapter,
           chapterChanged,
           systemMessage,
         };

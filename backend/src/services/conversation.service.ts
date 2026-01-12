@@ -41,7 +41,7 @@ export class ConversationService {
       throw new Error('Accès non autorisé à cette conversation');
     }
 
-    const revealLevel = conversation.revealLevel ?? computeRevealLevel(conversation.textMessageCount);
+    const revealLevel = (conversation.revealLevel ?? 0);
     const otherUser = applyRevealToUser(
       conversation.user1Id === userId ? conversation.user2 : conversation.user1,
       revealLevel
