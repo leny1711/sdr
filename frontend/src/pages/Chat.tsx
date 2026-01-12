@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { conversationAPI, messageAPI } from '../services/api';
-import { socketService } from '../services/socket';
+import { socketService, SocketMessageEnvelope } from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
 import type { ConversationWithMessages, Message } from '../types';
 import styles from './Chat.module.css';
@@ -21,13 +21,23 @@ const Chat: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const calculateRevealLevel = useCallback((count: number): number => {
-    if (count >= 50) return 4;
-    if (count >= 35) return 3;
-    if (count >= 20) return 2;
-    if (count >= 10) return 1;
-    return 0;
+  const mergeMessages = useCallback((incoming: Message[], previous: Message[]) => {
+    const map = new Map<string, Message>();
+    [...previous, ...incoming].forEach((msg) => {
+      if (msg?.id) {
+        map.set(msg.id, msg);
+      }
+    });
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
   }, []);
+
+  useEffect(() => {
+    setConversation(null);
+    setMessages([]);
+    setNextCursor(null);
+  }, [conversationId]);
 
   const loadConversation = useCallback(async () => {
     if (!conversationId) return;
@@ -40,10 +50,9 @@ const Chat: React.FC = () => {
       ]);
       setConversation(conversationData);
       if (messagePage?.messages) {
-        setMessages(messagePage.messages);
+        setMessages((prev) => mergeMessages(messagePage.messages, prev));
         setNextCursor(messagePage.nextCursor ?? null);
       } else {
-        setMessages([]);
         setNextCursor(null);
       }
     } catch (error) {
@@ -52,7 +61,7 @@ const Chat: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, mergeMessages]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!conversationId || !nextCursor || loadingOlder) return;
@@ -61,14 +70,7 @@ const Chat: React.FC = () => {
       setLoadingOlder(true);
       const page = await conversationAPI.getMessages(conversationId, nextCursor);
       if (page?.messages?.length) {
-        setMessages((prev) => {
-          const merged = [...page.messages, ...prev];
-          const map = new Map<string, Message>();
-          merged.forEach((msg) => map.set(msg.id, msg));
-          return Array.from(map.values()).sort(
-            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        });
+        setMessages((prev) => mergeMessages(page.messages, prev));
       }
       setNextCursor(page?.nextCursor ?? null);
     } catch (error) {
@@ -76,24 +78,24 @@ const Chat: React.FC = () => {
     } finally {
       setLoadingOlder(false);
     }
-  }, [conversationId, nextCursor, loadingOlder]);
+  }, [conversationId, nextCursor, loadingOlder, mergeMessages]);
 
   useEffect(() => {
     if (!conversationId) return;
 
-    const handleNewMessage = (payload: Message | { message: Message; revealLevel?: number }) => {
-      const incomingMessage = (payload as any).message ? (payload as any).message : (payload as Message);
-      const incomingRevealLevel = (payload as any).revealLevel as number | undefined;
+    const handleNewMessage = (payload: SocketMessageEnvelope) => {
+      const incomingMessage = payload.message;
+      const incomingRevealLevel = payload.revealLevel;
+      const incomingTextCount = payload.textMessageCount;
 
-      setMessages((prev) => [...prev, incomingMessage]);
-      
-      // Update text message count if it's a text message
+      setMessages((prev) => mergeMessages([incomingMessage], prev));
+
+      // Update text message count and reveal level from server payload when available
       if (incomingMessage.type === 'TEXT') {
         setConversation((prev) => {
           if (!prev) return prev;
-          const newCount = prev.textMessageCount + 1;
-          const newRevealLevel =
-            typeof incomingRevealLevel === 'number' ? incomingRevealLevel : calculateRevealLevel(newCount);
+          const newCount = typeof incomingTextCount === 'number' ? incomingTextCount : prev.textMessageCount + 1;
+          const newRevealLevel = typeof incomingRevealLevel === 'number' ? incomingRevealLevel : prev.revealLevel;
           return {
             ...prev,
             textMessageCount: newCount,
@@ -120,7 +122,7 @@ const Chat: React.FC = () => {
       socketService.off('message:new');
       socketService.off('typing:user');
     };
-  }, [conversationId, user?.id, loadConversation, calculateRevealLevel]);
+  }, [conversationId, user?.id, loadConversation]);
 
   useEffect(() => {
     if (!loadingOlder) {
