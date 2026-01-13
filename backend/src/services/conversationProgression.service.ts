@@ -4,6 +4,19 @@ import { Prisma } from '@prisma/client';
 
 export class ConversationProgressionService {
   static async recompute(conversationId: string) {
+    type ChapterKey =
+      | 'chapter1UnlockedAt'
+      | 'chapter2UnlockedAt'
+      | 'chapter3UnlockedAt'
+      | 'chapter4UnlockedAt';
+
+    const chapterKeys: ChapterKey[] = [
+      'chapter1UnlockedAt',
+      'chapter2UnlockedAt',
+      'chapter3UnlockedAt',
+      'chapter4UnlockedAt',
+    ];
+
     const [conversation, textMessageCount] = await Promise.all([
       prisma.conversation.findUnique({
         where: { id: conversationId },
@@ -64,12 +77,16 @@ export class ConversationProgressionService {
       });
     }
 
-    const chapterUnlocks: Record<string, Date | null> = {};
-    [1, 2, 3, 4].forEach((chapter) => {
-      const key = `chapter${chapter}UnlockedAt` as const;
+    const chapterUnlocks: Record<ChapterKey, Date | null> = {
+      chapter1UnlockedAt: null,
+      chapter2UnlockedAt: null,
+      chapter3UnlockedAt: null,
+      chapter4UnlockedAt: null,
+    };
+
+    chapterKeys.forEach((key) => {
       const nextValue = (updates as Record<string, Date | undefined>)[key];
-      // @ts-ignore - index access on selected conversation shape
-      const previousValue = conversation[key] as Date | null | undefined;
+      const previousValue = conversation[key];
       chapterUnlocks[key] = previousValue ?? nextValue ?? null;
     });
 
