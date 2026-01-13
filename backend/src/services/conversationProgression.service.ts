@@ -56,35 +56,29 @@ export class ConversationProgressionService {
     };
     const chapterUpdates: Partial<Record<ChapterKey, Date>> = {};
 
-    if (textMessageCount >= CHAPTER_THRESHOLDS[1] && !conversation.chapter1UnlockedAt) {
-      updates.chapter1UnlockedAt = now;
-      chapterUpdates.chapter1UnlockedAt = now;
-    }
-    if (textMessageCount >= CHAPTER_THRESHOLDS[2] && !conversation.chapter2UnlockedAt) {
-      updates.chapter2UnlockedAt = now;
-      chapterUpdates.chapter2UnlockedAt = now;
-    }
-    if (textMessageCount >= CHAPTER_THRESHOLDS[3] && !conversation.chapter3UnlockedAt) {
-      updates.chapter3UnlockedAt = now;
-      chapterUpdates.chapter3UnlockedAt = now;
-    }
-    if (textMessageCount >= CHAPTER_THRESHOLDS[4] && !conversation.chapter4UnlockedAt) {
-      updates.chapter4UnlockedAt = now;
-      chapterUpdates.chapter4UnlockedAt = now;
-    }
+    const chapterThresholds: Array<{ key: ChapterKey; threshold: number }> = [
+      { key: 'chapter1UnlockedAt', threshold: CHAPTER_THRESHOLDS[1] },
+      { key: 'chapter2UnlockedAt', threshold: CHAPTER_THRESHOLDS[2] },
+      { key: 'chapter3UnlockedAt', threshold: CHAPTER_THRESHOLDS[3] },
+      { key: 'chapter4UnlockedAt', threshold: CHAPTER_THRESHOLDS[4] },
+    ];
+
+    chapterThresholds.forEach(({ key, threshold }) => {
+      if (textMessageCount >= threshold && !conversation[key]) {
+        const timestamp = now;
+        chapterUpdates[key] = timestamp;
+      }
+    });
 
     const shouldUpdate =
       conversation.textMessageCount !== textMessageCount ||
       conversation.revealLevel !== revealLevel ||
-      updates.chapter1UnlockedAt ||
-      updates.chapter2UnlockedAt ||
-      updates.chapter3UnlockedAt ||
-      updates.chapter4UnlockedAt;
+      Object.keys(chapterUpdates).length > 0;
 
     if (shouldUpdate) {
       await prisma.conversation.update({
         where: { id: conversationId },
-        data: updates,
+        data: { ...updates, ...chapterUpdates },
       });
     }
 
@@ -98,7 +92,7 @@ export class ConversationProgressionService {
     chapterKeys.forEach((key) => {
       const nextValue = chapterUpdates[key];
       const previousValue = conversation[key];
-      chapterUnlocks[key] = previousValue ?? nextValue ?? null;
+      chapterUnlocks[key] = nextValue ?? previousValue ?? null;
     });
 
     return {
