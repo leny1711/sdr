@@ -45,7 +45,12 @@ const Chat: React.FC = () => {
 
     const handleNewMessage = (payload: Message | { message: Message }) => {
       const incomingMessage = 'message' in payload ? payload.message : payload;
-      setMessages((prev) => [...prev, incomingMessage]);
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.id === incomingMessage.id)) {
+          return prev;
+        }
+        return [...prev, incomingMessage];
+      });
     };
 
     loadConversation();
@@ -69,7 +74,12 @@ const Chat: React.FC = () => {
     setSending(true);
     try {
       const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
-      setMessages((prev) => [...prev, sentMessage]);
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.id === sentMessage.id)) {
+          return prev;
+        }
+        return [...prev, sentMessage];
+      });
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -121,7 +131,7 @@ const Chat: React.FC = () => {
                 }`}
               >
                 <div className={styles.messageContent}>
-                  <p>{message.type === 'TEXT' ? message.content : 'Voice message'}</p>
+                  <p>{message.content ?? ''}</p>
                 </div>
                 <span className={styles.timestamp}>
                   {new Date(message.createdAt).toLocaleTimeString([], {
