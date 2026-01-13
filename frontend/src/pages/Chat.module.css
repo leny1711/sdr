@@ -24,13 +24,6 @@
   font-size: 1.25rem;
 }
 
-.revealInfo {
-  font-size: 0.875rem;
-  font-family: var(--font-sans);
-  color: var(--text-tertiary);
-  margin: 0;
-}
-
 .messagesContainer {
   flex: 1;
   overflow-y: auto;
@@ -43,20 +36,10 @@
   color: var(--text-tertiary);
 }
 
-.hint {
-  font-size: 0.875rem;
-  margin-top: var(--spacing-sm);
-}
-
 .messagesList {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-}
-
-.loadMore {
-  display: flex;
-  justify-content: center;
 }
 
 .message {
@@ -93,26 +76,11 @@
   word-break: break-word;
 }
 
-.voiceMessage {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-}
-
 .timestamp {
   font-size: 0.75rem;
   font-family: var(--font-sans);
   color: var(--text-tertiary);
   margin-top: 0.25rem;
-}
-
-.typingIndicator {
-  font-size: 0.875rem;
-  font-family: var(--font-sans);
-  color: var(--text-tertiary);
-  font-style: italic;
 }
 
 .inputContainer {

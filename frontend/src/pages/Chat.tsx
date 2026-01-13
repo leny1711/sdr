@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { conversationAPI, messageAPI } from '../services/api';
 import { socketService } from '../services/socket';
@@ -12,25 +12,27 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [loadingOlder, setLoadingOlder] = useState(false);
   const [sending, setSending] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<number | undefined>(undefined);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const calculateRevealLevel = useCallback((count: number): number => {
-    if (count >= 50) return 4;
-    if (count >= 35) return 3;
-    if (count >= 20) return 2;
-    if (count >= 10) return 1;
-    return 0;
+  const addUniqueMessage = useCallback((incomingMessage: Message) => {
+    setMessages((prev) => {
+      if (prev.some((msg) => msg.id === incomingMessage.id)) {
+        return prev;
+      }
+      return [...prev, incomingMessage];
+    });
   }, []);
 
   const loadConversation = useCallback(async () => {
-    if (!conversationId) return;
+    if (!conversationId) {
+      setConversation(null);
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -39,112 +41,37 @@ const Chat: React.FC = () => {
         conversationAPI.getMessages(conversationId),
       ]);
       setConversation(conversationData);
-      if (messagePage?.messages) {
-        setMessages(messagePage.messages);
-        setNextCursor(messagePage.nextCursor ?? null);
-      } else {
-        setMessages([]);
-        setNextCursor(null);
-      }
+      setMessages(messagePage?.messages ?? []);
     } catch (error) {
       console.error('Failed to load conversation:', error);
-      setNextCursor(null);
+      setConversation(null);
+      setMessages([]);
     } finally {
       setLoading(false);
     }
   }, [conversationId]);
 
-  const loadOlderMessages = useCallback(async () => {
-    if (!conversationId || !nextCursor || loadingOlder) return;
-
-    try {
-      setLoadingOlder(true);
-      const page = await conversationAPI.getMessages(conversationId, nextCursor);
-      if (page?.messages?.length) {
-        setMessages((prev) => {
-          const merged = [...page.messages, ...prev];
-          const map = new Map<string, Message>();
-          merged.forEach((msg) => map.set(msg.id, msg));
-          return Array.from(map.values()).sort(
-            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        });
-      }
-      setNextCursor(page?.nextCursor ?? null);
-    } catch (error) {
-      console.error('Failed to load older messages:', error);
-    } finally {
-      setLoadingOlder(false);
-    }
-  }, [conversationId, nextCursor, loadingOlder]);
-
   useEffect(() => {
     if (!conversationId) return;
 
-    const handleNewMessage = (payload: Message | { message: Message; revealLevel?: number }) => {
-      const incomingMessage = (payload as any).message ? (payload as any).message : (payload as Message);
-      const incomingRevealLevel = (payload as any).revealLevel as number | undefined;
-
-      setMessages((prev) => [...prev, incomingMessage]);
-      
-      // Update text message count if it's a text message
-      if (incomingMessage.type === 'TEXT') {
-        setConversation((prev) => {
-          if (!prev) return prev;
-          const newCount = prev.textMessageCount + 1;
-          const newRevealLevel =
-            typeof incomingRevealLevel === 'number' ? incomingRevealLevel : calculateRevealLevel(newCount);
-          return {
-            ...prev,
-            textMessageCount: newCount,
-            revealLevel: newRevealLevel,
-          };
-        });
-      }
-    };
-
-    const handleTyping = (data: { userId: string; isTyping: boolean }) => {
-      if (data.userId !== user?.id) {
-        setIsTyping(data.isTyping);
-      }
+    const handleNewMessage = (payload: Message | { message: Message }) => {
+      const incomingMessage = 'message' in payload ? payload.message : payload;
+      addUniqueMessage(incomingMessage);
     };
 
     loadConversation();
     socketService.joinConversation(conversationId);
-
     socketService.onNewMessage(handleNewMessage);
-    socketService.onTyping(handleTyping);
 
     return () => {
       socketService.leaveConversation(conversationId);
       socketService.off('message:new');
-      socketService.off('typing:user');
     };
-  }, [conversationId, user?.id, loadConversation, calculateRevealLevel]);
+  }, [conversationId, loadConversation, addUniqueMessage]);
 
   useEffect(() => {
-    if (!loadingOlder) {
-      scrollToBottom();
-    }
-  }, [messages, loadingOlder]);
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleTypingStart = () => {
-    if (!conversationId) return;
-
-    socketService.startTyping(conversationId);
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = window.setTimeout(() => {
-      socketService.stopTyping(conversationId);
-    }, 3000);
-  };
+  }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,12 +79,15 @@ const Chat: React.FC = () => {
 
     setSending(true);
     try {
-      await messageAPI.sendText(conversationId, newMessage.trim());
-      setNewMessage('');
-      socketService.stopTyping(conversationId);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+      const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
+      if (!sentMessage) {
+        console.warn('sendText did not return a message');
+        return;
       }
+      if (!messages.some((msg) => msg.id === sentMessage.id)) {
+        addUniqueMessage(sentMessage);
+      }
+      setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
     } finally {
@@ -165,22 +95,21 @@ const Chat: React.FC = () => {
     }
   };
 
-  const getRevealLevelText = (level: number): string => {
-    switch (level) {
-      case 0:
-        return 'Chapitre 0 • Photo cachée';
-      case 1:
-        return 'Chapitre 1 • Silhouette floutée (N&B)';
-      case 2:
-        return 'Chapitre 2 • Contours (N&B)';
-      case 3:
-        return 'Chapitre 3 • Couleur partielle';
-      case 4:
-        return 'Chapitre final • Photo dévoilée';
-      default:
-        return '';
-    }
-  };
+  const textMessages = useMemo(
+    () =>
+      messages.filter((message) => {
+        const isText = message.type === 'TEXT';
+        const hasContent = Boolean(message.content);
+        if (isText && !hasContent) {
+          console.warn('Skipping text message without content', {
+            id: message.id,
+            createdAt: message.createdAt,
+          });
+        }
+        return isText && hasContent;
+      }),
+    [messages]
+  );
 
   if (loading) {
     return (
@@ -207,30 +136,17 @@ const Chat: React.FC = () => {
         </button>
         <div className={styles.headerInfo}>
           <h2>{conversation.otherUser.name}</h2>
-          <p className={styles.revealInfo}>
-            Photo: {getRevealLevelText(conversation.revealLevel)}
-          </p>
         </div>
       </div>
 
       <div className={styles.messagesContainer}>
-        {messages.length === 0 ? (
+        {textMessages.length === 0 ? (
           <div className={styles.emptyState}>
             <p>Start your conversation!</p>
-            <p className={styles.hint}>
-              Photos reveal gradually as you exchange messages.
-            </p>
           </div>
         ) : (
           <div className={styles.messagesList}>
-            {nextCursor && (
-              <div className={styles.loadMore}>
-                <button onClick={loadOlderMessages} disabled={loadingOlder} className="secondary">
-                  {loadingOlder ? 'Loading previous messages...' : 'Load previous messages'}
-                </button>
-              </div>
-            )}
-            {messages.map((message) => (
+            {textMessages.map((message) => (
               <div
                 key={message.id}
                 className={`${styles.message} ${
@@ -238,13 +154,7 @@ const Chat: React.FC = () => {
                 }`}
               >
                 <div className={styles.messageContent}>
-                  {message.type === 'TEXT' ? (
-                    <p>{message.content}</p>
-                  ) : (
-                    <div className={styles.voiceMessage}>
-                      <span>🎤 Voice message</span>
-                    </div>
-                  )}
+                  <p>{message.content}</p>
                 </div>
                 <span className={styles.timestamp}>
                   {new Date(message.createdAt).toLocaleTimeString([], {
@@ -254,11 +164,6 @@ const Chat: React.FC = () => {
                 </span>
               </div>
             ))}
-            {isTyping && (
-              <div className={styles.typingIndicator}>
-                <span>{conversation.otherUser.name} is typing...</span>
-              </div>
-            )}
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -268,10 +173,7 @@ const Chat: React.FC = () => {
         <input
           type="text"
           value={newMessage}
-          onChange={(e) => {
-            setNewMessage(e.target.value);
-            handleTypingStart();
-          }}
+          onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type your message..."
           disabled={sending}
         />
