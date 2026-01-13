@@ -47,7 +47,8 @@ const ChatScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user } = useAuth();
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [historyMessages, setHistoryMessages] = useState<Message[]>([]);
+  const [liveMessages, setLiveMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -91,7 +92,7 @@ const ChatScreen = () => {
         }
       });
       return Array.from(map.values())
-        .sort((a, b) => a.timestamp - b.timestamp)
+        .sort((a, b) => b.timestamp - a.timestamp)
         .map(({ message }) => message);
     },
     [messageTimestampCache]
@@ -135,7 +136,7 @@ const ChatScreen = () => {
       const incomingCount: number | undefined =
         'textMessageCount' in payload ? payload.textMessageCount : undefined;
 
-      setMessages((prev) => {
+      setLiveMessages((prev) => {
         const withoutTemp = prev.filter(
           (msg) =>
             !(
@@ -206,21 +207,27 @@ const ChatScreen = () => {
     });
   };
 
+  const handleNewMessage = useCallback(
+    (payload: MessageEnvelope | { message: Message } | Message) => applyIncomingPayload(payload),
+    [applyIncomingPayload]
+  );
+
   useEffect(() => {
     if (!ensureConversation() || !conversationId) {
       setIsLoading(false);
+      setHistoryMessages([]);
+      setLiveMessages([]);
       return;
     }
 
+    setHistoryMessages([]);
+    setLiveMessages([]);
+    setNextCursor(null);
     loadConversation();
     loadMessages();
 
     // Join conversation room
     socketService.joinConversation(conversationId);
-
-    // Listen for new messages
-    const handleNewMessage = (payload: MessageEnvelope | { message: Message } | Message) =>
-      applyIncomingPayload(payload);
 
     // Listen for typing
     const handleTyping = (data: { userId: string; isTyping: boolean }) => {
@@ -229,7 +236,9 @@ const ChatScreen = () => {
       }
     };
 
+    socketService.offNewMessage(handleNewMessage);
     socketService.onNewMessage(handleNewMessage);
+    socketService.offUserTyping(handleTyping);
     socketService.onUserTyping(handleTyping);
 
     return () => {
@@ -239,7 +248,7 @@ const ChatScreen = () => {
       socketService.offNewMessage(handleNewMessage);
       socketService.offUserTyping(handleTyping);
     };
-  }, [conversationId, user?.id, applyIncomingPayload]);
+  }, [conversationId, user?.id, handleNewMessage]);
 
   const loadConversation = async () => {
     if (!conversationId) return;
@@ -259,12 +268,12 @@ const ChatScreen = () => {
       const data = await apiService.getMessages(conversationId);
       if (data && Array.isArray(data.messages)) {
         const deduped = dedupeMessages(data.messages);
-        setMessages(deduped);
+        setHistoryMessages(deduped);
         setNextCursor(data.nextCursor ?? null);
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
-        setMessages([]);
+        setHistoryMessages([]);
         setNextCursor(null);
       }
     } catch (error: any) {
@@ -282,7 +291,7 @@ const ChatScreen = () => {
       const data = await apiService.getMessages(conversationId, nextCursor);
       if (data && Array.isArray(data.messages)) {
         if (data.messages.length > 0) {
-          setMessages((prev) => dedupeMessages([...data.messages, ...prev]));
+          setHistoryMessages((prev) => dedupeMessages([...data.messages, ...prev]));
         }
         setNextCursor(data.nextCursor ?? null);
       } else {
@@ -322,7 +331,7 @@ const ChatScreen = () => {
     };
 
     // Add message to local state immediately
-    setMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
+    setLiveMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
 
     try {
       const response = await apiService.sendTextMessage({
@@ -335,7 +344,7 @@ const ChatScreen = () => {
     } catch (error: any) {
       Alert.alert('Erreur', 'Envoi du message impossible.');
       // Remove optimistic message on error
-      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      setLiveMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       setInputText(messageText);
     } finally {
       setIsSending(false);
@@ -432,6 +441,11 @@ const ChatScreen = () => {
         });
     }
   }, [conversation?.id, conversation?.otherUser?.photoUrl, revealProgress.revealLevel]);
+
+  const combinedMessages = useMemo(
+    () => [...liveMessages, ...historyMessages],
+    [historyMessages, liveMessages]
+  );
 
   const renderMessage = ({ item }: { item: Message }) => {
     if (item.type === 'SYSTEM') {
@@ -557,17 +571,15 @@ const ChatScreen = () => {
 
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={combinedMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={renderListHeader}
           contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => {
-            if (!isLoadingOlder) {
-              flatListRef.current?.scrollToEnd();
-            }
-          }}
-          onLayout={() => flatListRef.current?.scrollToEnd()}
+          inverted
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
         />
 
         {typingUser && (
