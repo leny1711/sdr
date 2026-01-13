@@ -17,6 +17,15 @@ const Chat: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const addUniqueMessage = useCallback((incomingMessage: Message) => {
+    setMessages((prev) => {
+      if (prev.some((msg) => msg.id === incomingMessage.id)) {
+        return prev;
+      }
+      return [...prev, incomingMessage];
+    });
+  }, []);
+
   const loadConversation = useCallback(async () => {
     if (!conversationId) {
       setLoading(false);
@@ -45,12 +54,7 @@ const Chat: React.FC = () => {
 
     const handleNewMessage = (payload: Message | { message: Message }) => {
       const incomingMessage = 'message' in payload ? payload.message : payload;
-      setMessages((prev) => {
-        if (prev.some((msg) => msg.id === incomingMessage.id)) {
-          return prev;
-        }
-        return [...prev, incomingMessage];
-      });
+      addUniqueMessage(incomingMessage);
     };
 
     loadConversation();
@@ -61,7 +65,7 @@ const Chat: React.FC = () => {
       socketService.leaveConversation(conversationId);
       socketService.off('message:new');
     };
-  }, [conversationId, loadConversation]);
+  }, [conversationId, loadConversation, addUniqueMessage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,12 +78,7 @@ const Chat: React.FC = () => {
     setSending(true);
     try {
       const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
-      setMessages((prev) => {
-        if (prev.some((msg) => msg.id === sentMessage.id)) {
-          return prev;
-        }
-        return [...prev, sentMessage];
-      });
+      addUniqueMessage(sentMessage);
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -117,13 +116,15 @@ const Chat: React.FC = () => {
       </div>
 
       <div className={styles.messagesContainer}>
-        {messages.length === 0 ? (
+        {messages.filter((message) => message.type === 'TEXT').length === 0 ? (
           <div className={styles.emptyState}>
             <p>Start your conversation!</p>
           </div>
         ) : (
           <div className={styles.messagesList}>
-            {messages.map((message) => (
+            {messages
+              .filter((message) => message.type === 'TEXT')
+              .map((message) => (
               <div
                 key={message.id}
                 className={`${styles.message} ${
