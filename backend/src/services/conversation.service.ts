@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { applyRevealToUser, normalizePhotoUrl } from '../utils/reveal.utils';
+import { ConversationProgressionService } from './conversationProgression.service';
 
 export class ConversationService {
   static async getConversation(userId: string, conversationId: string) {
@@ -41,7 +42,8 @@ export class ConversationService {
       throw new Error('Accès non autorisé à cette conversation');
     }
 
-    const revealLevel = (conversation.revealLevel ?? 0);
+    const progression = await ConversationProgressionService.recompute(conversationId);
+    const revealLevel = progression.revealLevel ?? 0;
     const otherUser = applyRevealToUser(
       conversation.user1Id === userId ? conversation.user2 : conversation.user1,
       revealLevel
@@ -49,7 +51,7 @@ export class ConversationService {
 
     return {
       ...conversation,
-      revealLevel,
+      ...progression,
       user1:
         conversation.user1Id === userId
           ? { ...conversation.user1, photoUrl: normalizePhotoUrl(conversation.user1.photoUrl) }
