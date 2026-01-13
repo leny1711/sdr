@@ -55,6 +55,25 @@ The tool uses existing dependencies:
 - `socket.io-client` - WebSocket client
 - `typescript` and `ts-node` - TypeScript runtime
 
+## Quick Demo
+
+Want to see what the tool does without setting up a server? Try the demo:
+
+```bash
+cd backend/src/diagnostics
+
+# Run the message-limit scenario (default)
+npx ts-node demo.ts
+
+# Run the healthy system scenario
+npx ts-node demo.ts --healthy
+
+# Run the performance degradation scenario
+npx ts-node demo.ts --degradation
+```
+
+The demo simulates the diagnostic tool output for different scenarios, helping you understand what to expect and how to interpret the results.
+
 ## Usage
 
 ### Basic Usage
