@@ -25,7 +25,7 @@ export class ConversationProgressionService {
     ]);
 
     if (!conversation) {
-      throw new Error('Conversation introuvable');
+      throw new Error('Conversation not found');
     }
 
     const revealLevel = computeRevealLevel(textMessageCount);
@@ -64,13 +64,19 @@ export class ConversationProgressionService {
       });
     }
 
+    const chapterUnlocks: Record<string, Date | null> = {};
+    [1, 2, 3, 4].forEach((chapter) => {
+      const key = `chapter${chapter}UnlockedAt` as const;
+      const nextValue = (updates as Record<string, Date | undefined>)[key];
+      // @ts-ignore - index access on selected conversation shape
+      const previousValue = conversation[key] as Date | null | undefined;
+      chapterUnlocks[key] = previousValue ?? nextValue ?? null;
+    });
+
     return {
       textMessageCount,
       revealLevel,
-      chapter1UnlockedAt: conversation.chapter1UnlockedAt ?? updates.chapter1UnlockedAt ?? null,
-      chapter2UnlockedAt: conversation.chapter2UnlockedAt ?? updates.chapter2UnlockedAt ?? null,
-      chapter3UnlockedAt: conversation.chapter3UnlockedAt ?? updates.chapter3UnlockedAt ?? null,
-      chapter4UnlockedAt: conversation.chapter4UnlockedAt ?? updates.chapter4UnlockedAt ?? null,
+      ...chapterUnlocks,
     };
   }
 }
