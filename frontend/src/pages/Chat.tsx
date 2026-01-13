@@ -79,7 +79,9 @@ const Chat: React.FC = () => {
     setSending(true);
     try {
       const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
-      addUniqueMessage(sentMessage);
+      if (!messages.some((msg) => msg.id === sentMessage.id)) {
+        addUniqueMessage(sentMessage);
+      }
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -91,16 +93,15 @@ const Chat: React.FC = () => {
   const textMessages = useMemo(
     () =>
       messages.filter((message) => {
-        if (message.type === 'TEXT' && message.content) {
-          return true;
-        }
-        if (message.type === 'TEXT') {
+        const isText = message.type === 'TEXT';
+        const hasContent = Boolean(message.content);
+        if (isText && !hasContent) {
           console.warn('Skipping text message without content', {
             id: message.id,
             createdAt: message.createdAt,
           });
         }
-        return false;
+        return isText && hasContent;
       }),
     [messages]
   );
