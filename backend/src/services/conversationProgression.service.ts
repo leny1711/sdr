@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { CHAPTER_THRESHOLDS, computeRevealLevel } from '../utils/reveal.utils';
+import { Prisma } from '@prisma/client';
 
 export class ConversationProgressionService {
   static async recompute(conversationId: string) {
@@ -29,7 +30,7 @@ export class ConversationProgressionService {
     const revealLevel = computeRevealLevel(textMessageCount);
     const now = new Date();
 
-    const updates: Record<string, any> = {
+    const updates: Prisma.ConversationUpdateInput = {
       textMessageCount,
       revealLevel,
     };

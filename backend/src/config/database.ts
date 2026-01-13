@@ -3,9 +3,10 @@ import { PrismaClient } from '@prisma/client';
 const withConnectionLimit = (url: string, limit: number = 5): string => {
   try {
     const parsed = new URL(url);
-    if (!parsed.searchParams.get('connection_limit')) {
-      parsed.searchParams.set('connection_limit', String(limit));
+    if (parsed.searchParams.has('connection_limit')) {
+      return parsed.toString();
     }
+    parsed.searchParams.set('connection_limit', String(limit));
     return parsed.toString();
   } catch {
     if (url.includes('connection_limit=')) return url;
