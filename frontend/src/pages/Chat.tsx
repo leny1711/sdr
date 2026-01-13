@@ -79,7 +79,11 @@ const Chat: React.FC = () => {
     setSending(true);
     try {
       const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
-      addUniqueMessage(sentMessage);
+      if (sentMessage) {
+        addUniqueMessage(sentMessage);
+      } else {
+        console.warn('No message returned from sendText');
+      }
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
