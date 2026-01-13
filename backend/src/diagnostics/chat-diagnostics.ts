@@ -8,8 +8,8 @@
  */
 
 import { io, Socket } from 'socket.io-client';
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'fs';
+import path from 'path';
 
 // Configuration interface
 interface DiagnosticConfig {
@@ -23,6 +23,8 @@ interface DiagnosticConfig {
   outputDir: string;
   memoryCheckInterval: number; // milliseconds
   memoryThresholdMB: number;
+  connectionTimeoutMs: number;
+  messageTimeoutMs: number;
 }
 
 // Message log entry
@@ -135,7 +137,11 @@ class ChatDiagnosticTool {
     if (type === 'error') {
       console.error(`${prefix}`, data);
     } else {
-      console.log(`${prefix}`, event || '', messageNumber !== undefined ? `#${messageNumber}` : '', JSON.stringify(data).substring(0, 100));
+      const parts = [prefix];
+      if (event) parts.push(event);
+      if (messageNumber !== undefined) parts.push(`#${messageNumber}`);
+      parts.push(JSON.stringify(data).substring(0, 100));
+      console.log(parts.join(' '));
     }
   }
 
@@ -248,7 +254,7 @@ class ChatDiagnosticTool {
         if (!this.socket?.connected) {
           reject(new Error('Connection timeout'));
         }
-      }, 10000);
+      }, this.config.connectionTimeoutMs);
     });
   }
 
@@ -296,10 +302,10 @@ class ChatDiagnosticTool {
       // Set timeout for response
       this.messageTimeout = setTimeout(() => {
         this.metrics.responseTimeouts++;
-        this.detectAnomaly(`No response received for message #${messageNumber} after 10 seconds`);
+        this.detectAnomaly(`No response received for message #${messageNumber} after ${this.config.messageTimeoutMs / 1000} seconds`);
         this.messageTimeout = null;
         resolve(); // Continue anyway
-      }, 10000);
+      }, this.config.messageTimeoutMs);
 
       this.log('sent', { content }, 'message:text', messageNumber);
       
@@ -554,7 +560,7 @@ class ChatDiagnosticTool {
 
         content += 'PERFORMANCE METRICS:\n';
         content += '-'.repeat(80) + '\n';
-        content += `Duration: ${this.metrics.durationMs}ms (${(this.metrics.durationMs! / 1000).toFixed(2)}s)\n`;
+        content += `Duration: ${this.metrics.durationMs!}ms (${(this.metrics.durationMs! / 1000).toFixed(2)}s)\n`;
         content += `Messages Sent: ${this.metrics.totalMessagesSent}\n`;
         content += `Messages Received: ${this.metrics.totalMessagesReceived}\n`;
         content += `Response Rate: ${((this.metrics.totalMessagesReceived / this.metrics.totalMessagesSent) * 100).toFixed(1)}%\n`;
@@ -720,6 +726,8 @@ async function main(): Promise<void> {
     outputDir: cliConfig.outputDir || process.env.OUTPUT_DIR || './logs',
     memoryCheckInterval: 5000, // Check memory every 5 seconds
     memoryThresholdMB: 200, // Alert if memory exceeds 200MB
+    connectionTimeoutMs: 10000, // 10 seconds for initial connection
+    messageTimeoutMs: 10000, // 10 seconds for message response
   };
 
   // Validate required configuration

@@ -19,11 +19,10 @@ echo -e "${GREEN}║     WebSocket Chat Diagnostic Tool                        �
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Check if ts-node is available
-if ! command -v ts-node &> /dev/null; then
+# Check if ts-node is available (local or global)
+if ! npx ts-node --version &> /dev/null && ! command -v ts-node &> /dev/null; then
     echo -e "${RED}Error: ts-node is not installed${NC}"
-    echo "Please run: npm install -g ts-node"
-    echo "Or run from backend directory: npm install"
+    echo "Please run from backend directory: npm install"
     exit 1
 fi
 
@@ -129,8 +128,8 @@ run_preset() {
     read -p "Press Enter to start, or Ctrl+C to cancel..."
     echo ""
     
-    # Run the diagnostic tool
-    ts-node chat-diagnostics.ts \
+    # Run the diagnostic tool using npx to ensure local installation is used
+    npx ts-node chat-diagnostics.ts \
         -u "${SERVER_URL:-http://localhost:5000}" \
         -t "$AUTH_TOKEN" \
         -c "$CONVERSATION_ID" \

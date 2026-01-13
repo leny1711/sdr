@@ -281,7 +281,7 @@ Configuration:
 
 ### Conversation Errors
 
-**Problem:** `Conversation invalide`
+**Problem:** `Invalid conversation`
 - **Solution:** Verify the conversation ID exists and you have access
 - **Check:** List your conversations via the API
 
