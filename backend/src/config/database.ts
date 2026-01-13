@@ -1,7 +1,26 @@
 import { PrismaClient } from '@prisma/client';
 
+const withConnectionLimit = (url: string, limit: number = 5): string => {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.get('connection_limit')) {
+      parsed.searchParams.set('connection_limit', String(limit));
+    }
+    return parsed.toString();
+  } catch {
+    if (url.includes('connection_limit=')) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}connection_limit=${limit}`;
+  }
+};
+
 const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  log: ['error', 'warn'],
+  datasources: {
+    db: {
+      url: withConnectionLimit(process.env.DATABASE_URL!),
+    },
+  },
 });
 
 export default prisma;

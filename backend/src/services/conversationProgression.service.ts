@@ -1,0 +1,74 @@
+import prisma from '../config/database';
+import { CHAPTER_THRESHOLDS, computeRevealLevel } from '../utils/reveal.utils';
+
+export class ConversationProgressionService {
+  static async recompute(conversationId: string) {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: {
+        textMessageCount: true,
+        revealLevel: true,
+        chapter1UnlockedAt: true,
+        chapter2UnlockedAt: true,
+        chapter3UnlockedAt: true,
+        chapter4UnlockedAt: true,
+      },
+    });
+
+    if (!conversation) {
+      throw new Error('Conversation introuvable');
+    }
+
+    const textMessageCount = await prisma.message.count({
+      where: {
+        conversationId,
+        type: 'TEXT',
+      },
+    });
+
+    const revealLevel = computeRevealLevel(textMessageCount);
+    const now = new Date();
+
+    const updates: Record<string, any> = {
+      textMessageCount,
+      revealLevel,
+    };
+
+    if (textMessageCount >= CHAPTER_THRESHOLDS[1] && !conversation.chapter1UnlockedAt) {
+      updates.chapter1UnlockedAt = now;
+    }
+    if (textMessageCount >= CHAPTER_THRESHOLDS[2] && !conversation.chapter2UnlockedAt) {
+      updates.chapter2UnlockedAt = now;
+    }
+    if (textMessageCount >= CHAPTER_THRESHOLDS[3] && !conversation.chapter3UnlockedAt) {
+      updates.chapter3UnlockedAt = now;
+    }
+    if (textMessageCount >= CHAPTER_THRESHOLDS[4] && !conversation.chapter4UnlockedAt) {
+      updates.chapter4UnlockedAt = now;
+    }
+
+    const shouldUpdate =
+      conversation.textMessageCount !== textMessageCount ||
+      conversation.revealLevel !== revealLevel ||
+      updates.chapter1UnlockedAt ||
+      updates.chapter2UnlockedAt ||
+      updates.chapter3UnlockedAt ||
+      updates.chapter4UnlockedAt;
+
+    if (shouldUpdate) {
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: updates,
+      });
+    }
+
+    return {
+      textMessageCount,
+      revealLevel,
+      chapter1UnlockedAt: conversation.chapter1UnlockedAt ?? updates.chapter1UnlockedAt ?? null,
+      chapter2UnlockedAt: conversation.chapter2UnlockedAt ?? updates.chapter2UnlockedAt ?? null,
+      chapter3UnlockedAt: conversation.chapter3UnlockedAt ?? updates.chapter3UnlockedAt ?? null,
+      chapter4UnlockedAt: conversation.chapter4UnlockedAt ?? updates.chapter4UnlockedAt ?? null,
+    };
+  }
+}
