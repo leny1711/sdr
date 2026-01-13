@@ -4,28 +4,29 @@ import { Prisma } from '@prisma/client';
 
 export class ConversationProgressionService {
   static async recompute(conversationId: string) {
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
-      select: {
-        textMessageCount: true,
-        revealLevel: true,
-        chapter1UnlockedAt: true,
-        chapter2UnlockedAt: true,
-        chapter3UnlockedAt: true,
-        chapter4UnlockedAt: true,
-      },
-    });
+    const [conversation, textMessageCount] = await Promise.all([
+      prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: {
+          textMessageCount: true,
+          revealLevel: true,
+          chapter1UnlockedAt: true,
+          chapter2UnlockedAt: true,
+          chapter3UnlockedAt: true,
+          chapter4UnlockedAt: true,
+        },
+      }),
+      prisma.message.count({
+        where: {
+          conversationId,
+          type: 'TEXT',
+        },
+      }),
+    ]);
 
     if (!conversation) {
       throw new Error('Conversation introuvable');
     }
-
-    const textMessageCount = await prisma.message.count({
-      where: {
-        conversationId,
-        type: 'TEXT',
-      },
-    });
 
     const revealLevel = computeRevealLevel(textMessageCount);
     const now = new Date();

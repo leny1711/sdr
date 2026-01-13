@@ -1,17 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 
 const withConnectionLimit = (url: string, limit: number = 5): string => {
+  const appendLimitParam = (rawUrl: string) => {
+    if (rawUrl.includes('connection_limit=')) return rawUrl;
+    const separator = rawUrl.includes('?') ? '&' : '?';
+    return `${rawUrl}${separator}connection_limit=${limit}`;
+  };
+
   try {
     const parsed = new URL(url);
-    if (parsed.searchParams.has('connection_limit')) {
-      return parsed.toString();
-    }
-    parsed.searchParams.set('connection_limit', String(limit));
-    return parsed.toString();
+    return appendLimitParam(parsed.toString());
   } catch {
-    if (url.includes('connection_limit=')) return url;
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}connection_limit=${limit}`;
+    return appendLimitParam(url);
   }
 };
 
