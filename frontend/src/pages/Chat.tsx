@@ -28,6 +28,7 @@ const Chat: React.FC = () => {
 
   const loadConversation = useCallback(async () => {
     if (!conversationId) {
+      setConversation(null);
       setLoading(false);
       return;
     }
@@ -77,7 +78,8 @@ const Chat: React.FC = () => {
 
     setSending(true);
     try {
-      await messageAPI.sendText(conversationId, newMessage.trim());
+      const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
+      addUniqueMessage(sentMessage);
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -93,7 +95,11 @@ const Chat: React.FC = () => {
           return true;
         }
         if (message.type === 'TEXT') {
-          console.warn('Skipping text message without content', message);
+          console.warn(
+            'Skipping text message without content',
+            { id: message.id, createdAt: message.createdAt },
+            message
+          );
         }
         return false;
       }),
