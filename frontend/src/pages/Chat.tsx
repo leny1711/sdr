@@ -29,6 +29,7 @@ const Chat: React.FC = () => {
   const loadConversation = useCallback(async () => {
     if (!conversationId) {
       setConversation(null);
+      setMessages([]);
       setLoading(false);
       return;
     }
@@ -79,6 +80,10 @@ const Chat: React.FC = () => {
     setSending(true);
     try {
       const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
+      if (!sentMessage) {
+        console.warn('sendText did not return a message');
+        return;
+      }
       if (!messages.some((msg) => msg.id === sentMessage.id)) {
         addUniqueMessage(sentMessage);
       }
