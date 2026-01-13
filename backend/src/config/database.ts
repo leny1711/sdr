@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 
+/**
+ * Ensure the provided database URL carries a connection_limit parameter.
+ * Falls back to a simple string append when URL parsing fails.
+ */
 const withConnectionLimit = (url: string, limit: number = 5): string => {
   const appendLimitParam = (rawUrl: string) => {
     if (rawUrl.toLowerCase().includes('connection_limit=')) return rawUrl;

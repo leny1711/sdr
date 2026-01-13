@@ -3,6 +3,12 @@ import { CHAPTER_THRESHOLDS, computeRevealLevel } from '../utils/reveal.utils';
 import { Prisma } from '@prisma/client';
 
 export class ConversationProgressionService {
+  /**
+   * Recompute and persist conversation progression based on current text messages.
+   * @param conversationId Conversation identifier to recalculate.
+   * @returns Updated progression data (message count, reveal level, chapter unlock timestamps).
+   * @throws Error when the conversation does not exist.
+   */
   static async recompute(conversationId: string) {
     type ChapterKey =
       | 'chapter1UnlockedAt'
@@ -48,18 +54,23 @@ export class ConversationProgressionService {
       textMessageCount,
       revealLevel,
     };
+    const chapterUpdates: Partial<Record<ChapterKey, Date>> = {};
 
     if (textMessageCount >= CHAPTER_THRESHOLDS[1] && !conversation.chapter1UnlockedAt) {
       updates.chapter1UnlockedAt = now;
+      chapterUpdates.chapter1UnlockedAt = now;
     }
     if (textMessageCount >= CHAPTER_THRESHOLDS[2] && !conversation.chapter2UnlockedAt) {
       updates.chapter2UnlockedAt = now;
+      chapterUpdates.chapter2UnlockedAt = now;
     }
     if (textMessageCount >= CHAPTER_THRESHOLDS[3] && !conversation.chapter3UnlockedAt) {
       updates.chapter3UnlockedAt = now;
+      chapterUpdates.chapter3UnlockedAt = now;
     }
     if (textMessageCount >= CHAPTER_THRESHOLDS[4] && !conversation.chapter4UnlockedAt) {
       updates.chapter4UnlockedAt = now;
+      chapterUpdates.chapter4UnlockedAt = now;
     }
 
     const shouldUpdate =
@@ -85,7 +96,7 @@ export class ConversationProgressionService {
     };
 
     chapterKeys.forEach((key) => {
-      const nextValue = (updates as Record<string, Date | undefined>)[key];
+      const nextValue = chapterUpdates[key];
       const previousValue = conversation[key];
       chapterUnlocks[key] = previousValue ?? nextValue ?? null;
     });
