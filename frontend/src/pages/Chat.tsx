@@ -104,6 +104,16 @@ const Chat: React.FC = () => {
     );
   }
 
+  const textMessages = messages.filter((message) => {
+    if (message.type === 'TEXT' && message.content) {
+      return true;
+    }
+    if (message.type === 'TEXT') {
+      console.warn('Skipping text message without content', message);
+    }
+    return false;
+  });
+
   return (
     <div className={styles.chatContainer}>
       <div className={styles.header}>
@@ -116,15 +126,13 @@ const Chat: React.FC = () => {
       </div>
 
       <div className={styles.messagesContainer}>
-        {messages.filter((message) => message.type === 'TEXT').length === 0 ? (
+        {textMessages.length === 0 ? (
           <div className={styles.emptyState}>
             <p>Start your conversation!</p>
           </div>
         ) : (
           <div className={styles.messagesList}>
-            {messages
-              .filter((message) => message.type === 'TEXT')
-              .map((message) => (
+            {textMessages.map((message) => (
               <div
                 key={message.id}
                 className={`${styles.message} ${
@@ -132,7 +140,7 @@ const Chat: React.FC = () => {
                 }`}
               >
                 <div className={styles.messageContent}>
-                  <p>{message.content ?? ''}</p>
+                  <p>{message.content}</p>
                 </div>
                 <span className={styles.timestamp}>
                   {new Date(message.createdAt).toLocaleTimeString([], {
