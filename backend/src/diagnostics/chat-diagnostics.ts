@@ -11,19 +11,33 @@ import { io, Socket } from 'socket.io-client';
 import fs from 'fs';
 import path from 'path';
 
-// Configuration interface
+/**
+ * Configuration interface for the diagnostic tool
+ */
 interface DiagnosticConfig {
+  /** WebSocket server URL (e.g., http://localhost:5000) */
   serverUrl: string;
+  /** JWT authentication token */
   token: string;
+  /** Conversation ID to test */
   conversationId: string;
+  /** Number of messages to send during the test */
   messageCount: number;
-  messageInterval: number; // milliseconds between messages
+  /** Time to wait between sending messages (milliseconds) */
+  messageInterval: number;
+  /** Whether to export logs to file */
   logToFile: boolean;
+  /** Format for exported logs (json or text) */
   logFormat: 'json' | 'text';
+  /** Directory path for exported log files */
   outputDir: string;
-  memoryCheckInterval: number; // milliseconds
+  /** Interval for periodic memory usage checks (milliseconds) */
+  memoryCheckInterval: number;
+  /** Memory threshold for alerts (megabytes) */
   memoryThresholdMB: number;
+  /** Timeout for initial WebSocket connection (milliseconds) */
   connectionTimeoutMs: number;
+  /** Timeout for waiting for message responses (milliseconds) */
   messageTimeoutMs: number;
 }
 
