@@ -79,11 +79,7 @@ const Chat: React.FC = () => {
     setSending(true);
     try {
       const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
-      if (sentMessage) {
-        addUniqueMessage(sentMessage);
-      } else {
-        console.warn('No message returned from sendText');
-      }
+      addUniqueMessage(sentMessage);
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -99,11 +95,10 @@ const Chat: React.FC = () => {
           return true;
         }
         if (message.type === 'TEXT') {
-          console.warn(
-            'Skipping text message without content',
-            { id: message.id, createdAt: message.createdAt },
-            message
-          );
+          console.warn('Skipping text message without content', {
+            id: message.id,
+            createdAt: message.createdAt,
+          });
         }
         return false;
       }),
