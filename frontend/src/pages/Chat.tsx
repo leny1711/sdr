@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { conversationAPI, messageAPI } from '../services/api';
 import { socketService } from '../services/socket';
@@ -77,8 +77,7 @@ const Chat: React.FC = () => {
 
     setSending(true);
     try {
-      const sentMessage = await messageAPI.sendText(conversationId, newMessage.trim());
-      addUniqueMessage(sentMessage);
+      await messageAPI.sendText(conversationId, newMessage.trim());
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -86,6 +85,20 @@ const Chat: React.FC = () => {
       setSending(false);
     }
   };
+
+  const textMessages = useMemo(
+    () =>
+      messages.filter((message) => {
+        if (message.type === 'TEXT' && message.content) {
+          return true;
+        }
+        if (message.type === 'TEXT') {
+          console.warn('Skipping text message without content', message);
+        }
+        return false;
+      }),
+    [messages]
+  );
 
   if (loading) {
     return (
@@ -103,16 +116,6 @@ const Chat: React.FC = () => {
       </div>
     );
   }
-
-  const textMessages = messages.filter((message) => {
-    if (message.type === 'TEXT' && message.content) {
-      return true;
-    }
-    if (message.type === 'TEXT') {
-      console.warn('Skipping text message without content', message);
-    }
-    return false;
-  });
 
   return (
     <div className={styles.chatContainer}>
