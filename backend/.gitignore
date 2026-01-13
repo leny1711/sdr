@@ -4,3 +4,7 @@ dist
 uploads
 *.log
 .DS_Store
+
+# Diagnostic tool logs
+src/diagnostics/logs/
+src/diagnostics/.env
