@@ -146,32 +146,9 @@ export const setupSocketHandlers = (io: Server) => {
         }
 
         const result = await MessageService.sendTextMessage(conversationId, socket.userId!, sanitizedContent);
-        const systemMessage = result.systemMessage;
-        // MessageService exposes chapterChanged when progression occurs; use it directly to drive unlock notifications
-        const justUnlockedChapter = Boolean(result.chapterChanged);
-
-        const revealLevel = result.revealLevel ?? null;
-
-        // Forward backend-computed payload as-is; no recalculation here to avoid duplicate work on the frontend
         io.to(conversationId).emit('message:new', {
           message: result.message,
-          revealLevel,
-          textMessageCount: result.textMessageCount,
-          chapter: result.chapter,
-          chapterChanged: result.chapterChanged,
-          systemMessage,
-          justUnlockedChapter,
         });
-
-        // Emit a dedicated event only when a new chapter is actually unlocked
-        if (justUnlockedChapter) {
-          io.to(conversationId).emit('chapter:unlocked', {
-            conversationId,
-            chapter: result.chapter,
-            revealLevel,
-            systemMessage: result.systemMessage,
-          });
-        }
 
         console.log(`Text message sent in conversation ${conversationId}`);
       })

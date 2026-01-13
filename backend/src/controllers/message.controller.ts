@@ -13,11 +13,6 @@ export class MessageController {
 
       io.to(conversationId).emit('message:new', {
         message: result.message,
-        revealLevel: result.revealLevel,
-        textMessageCount: result.textMessageCount,
-        chapter: result.chapter,
-        chapterChanged: result.chapterChanged,
-        systemMessage: result.systemMessage,
       });
 
       return res.status(201).json({
