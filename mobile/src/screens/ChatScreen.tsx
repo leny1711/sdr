@@ -313,7 +313,7 @@ const ChatScreen = () => {
     } catch (error: any) {
       Alert.alert('Erreur', 'Envoi du message impossible.');
       // Remove optimistic message on error
-        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       setInputText(messageText);
     } finally {
       setIsSending(false);
@@ -518,6 +518,9 @@ const ChatScreen = () => {
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
         />
 
         {typingUser && (
@@ -632,19 +635,6 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     padding: Spacing.lg,
-  },
-  loadMoreButton: {
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-  loadMoreContainer: {
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-  loadMoreText: {
-    fontSize: Typography.sm,
-    fontFamily: Typography.fontSans,
-    color: Colors.textSecondary,
   },
   systemMessageContainer: {
     alignSelf: 'center',
