@@ -225,16 +225,21 @@ const ChatScreen = () => {
     const handleNewMessage = (payload: MessageEnvelope | { message: Message } | Message) => {
       const incoming = 'message' in payload ? payload.message : payload;
       const activeConversationId = conversationIdRef.current;
-      if (incoming?.conversationId && activeConversationId && incoming.conversationId !== activeConversationId) {
+      const incomingConversationId = incoming?.conversationId;
+
+      if (!activeConversationId || incomingConversationId !== activeConversationId) {
         return;
       }
-      latestIncomingHandlerRef.current?.(payload);
+
+      latestIncomingHandlerRef.current(payload);
     };
 
     const handleTyping = (data: { userId: string; isTyping: boolean }) => {
-      if (data.userId !== userIdRef.current) {
-        setTypingUser(data.isTyping ? data.userId : null);
+      const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+      if (!userId || userId === userIdRef.current) {
+        return;
       }
+      setTypingUser(data.isTyping ? userId : null);
     };
 
     socketService.onNewMessage(handleNewMessage);
@@ -293,13 +298,15 @@ const ChatScreen = () => {
 
   useEffect(() => {
     if (!ensureConversation() || !conversationId) {
+      setTypingUser(null);
       setIsLoading(false);
       setMessages([]);
       setHasOlderMessages(false);
       setIsLoadingPrevious(false);
-      setTypingUser(null);
       return;
     }
+
+    setTypingUser(null);
 
     setMessages([]);
     loadConversation();
