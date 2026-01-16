@@ -206,6 +206,51 @@ const ChatScreen = () => {
     [dedupeMessages, limitMessages, markHasOlder, mergeConversationProgress]
   );
 
+  const latestIncomingHandlerRef = useRef(applyIncomingPayload);
+  useEffect(() => {
+    latestIncomingHandlerRef.current = applyIncomingPayload;
+  }, [applyIncomingPayload]);
+
+  const userIdRef = useRef(user?.id);
+  useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
+
+  const conversationIdRef = useRef(conversationId);
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  useEffect(() => {
+    const handleNewMessage = (payload: MessageEnvelope | { message: Message } | Message) => {
+      const incoming = 'message' in payload ? payload.message : payload;
+      const activeConversationId = conversationIdRef.current;
+      const incomingConversationId = incoming?.conversationId;
+
+      if (!activeConversationId || incomingConversationId !== activeConversationId) {
+        return;
+      }
+
+      latestIncomingHandlerRef.current(payload);
+    };
+
+    const handleTyping = (data: { userId: string; isTyping: boolean }) => {
+      const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+      if (!userId || userId === userIdRef.current) {
+        return;
+      }
+      setTypingUser(data.isTyping ? userId : null);
+    };
+
+    socketService.onNewMessage(handleNewMessage);
+    socketService.onUserTyping(handleTyping);
+
+    return () => {
+      socketService.offNewMessage(handleNewMessage);
+      socketService.offUserTyping(handleTyping);
+    };
+  }, []);
+
   const revealProgress = useMemo(
     () => ({
       textMessageCount: conversation?.textMessageCount ?? 0,
@@ -251,19 +296,17 @@ const ChatScreen = () => {
     });
   };
 
-  const handleNewMessage = useCallback(
-    (payload: MessageEnvelope | { message: Message } | Message) => applyIncomingPayload(payload),
-    [applyIncomingPayload]
-  );
-
   useEffect(() => {
     if (!ensureConversation() || !conversationId) {
+      setTypingUser(null);
       setIsLoading(false);
       setMessages([]);
       setHasOlderMessages(false);
       setIsLoadingPrevious(false);
       return;
     }
+
+    setTypingUser(null);
 
     setMessages([]);
     loadConversation();
@@ -272,26 +315,12 @@ const ChatScreen = () => {
     // Join conversation room
     socketService.joinConversation(conversationId);
 
-    // Listen for typing
-    const handleTyping = (data: { userId: string; isTyping: boolean }) => {
-      if (data.userId !== user?.id) {
-        setTypingUser(data.isTyping ? data.userId : null);
-      }
-    };
-
-    socketService.offNewMessage(handleNewMessage);
-    socketService.onNewMessage(handleNewMessage);
-    socketService.offUserTyping(handleTyping);
-    socketService.onUserTyping(handleTyping);
-
     return () => {
       if (conversationId) {
         socketService.leaveConversation(conversationId);
       }
-      socketService.offNewMessage(handleNewMessage);
-      socketService.offUserTyping(handleTyping);
     };
-  }, [conversationId, user?.id, handleNewMessage]);
+  }, [conversationId]);
 
   const loadConversation = async () => {
     if (!conversationId) return;

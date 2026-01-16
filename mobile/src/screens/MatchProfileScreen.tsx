@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import Screen from '../components/Screen';
@@ -17,6 +17,7 @@ const MatchProfileScreen = () => {
   const { user, revealLevel: initialRevealLevel, conversationId } = params;
   const [profileUser, setProfileUser] = useState(user);
   const [revealLevel, setRevealLevel] = useState(initialRevealLevel);
+  const conversationIdRef = useRef(conversationId);
 
   useEffect(() => {
     setProfileUser(user);
@@ -43,17 +44,22 @@ const MatchProfileScreen = () => {
   }, [conversationId, initialRevealLevel]);
 
   useEffect(() => {
-    if (!conversationId) return;
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  useEffect(() => {
     const handleIncoming = (payload: MessageEnvelope | { message: Message } | Message) => {
+      const activeConversationId = conversationIdRef.current;
+      if (!activeConversationId) return;
       const incoming = 'message' in payload ? payload.message : payload;
-      if (incoming?.conversationId !== conversationId) return;
+      if (incoming?.conversationId !== activeConversationId) return;
       if ('revealLevel' in payload && payload.revealLevel !== undefined) {
         setRevealLevel(payload.revealLevel);
       }
     };
     socketService.onNewMessage(handleIncoming);
     return () => socketService.offNewMessage(handleIncoming);
-  }, [conversationId]);
+  }, []);
 
   const ageLabel = typeof profileUser.age === 'number' ? profileUser.age : 'Âge inconnu';
   const cityLabel = profileUser.city || 'Ville inconnue';
