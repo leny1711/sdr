@@ -47,15 +47,12 @@ const ChatScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user } = useAuth();
 
-  const [historyMessages, setHistoryMessages] = useState<Message[]>([]);
-  const [liveMessages, setLiveMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [typingUser, setTypingUser] = useState<string | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -92,7 +89,7 @@ const ChatScreen = () => {
         }
       });
       return Array.from(map.values())
-        .sort((a, b) => b.timestamp - a.timestamp)
+        .sort((a, b) => a.timestamp - b.timestamp)
         .map(({ message }) => message);
     },
     [messageTimestampCache]
@@ -136,7 +133,7 @@ const ChatScreen = () => {
       const incomingCount: number | undefined =
         'textMessageCount' in payload ? payload.textMessageCount : undefined;
 
-      setLiveMessages((prev) => {
+      setMessages((prev) => {
         const withoutTemp = prev.filter(
           (msg) =>
             !(
@@ -215,14 +212,11 @@ const ChatScreen = () => {
   useEffect(() => {
     if (!ensureConversation() || !conversationId) {
       setIsLoading(false);
-      setHistoryMessages([]);
-      setLiveMessages([]);
+      setMessages([]);
       return;
     }
 
-    setHistoryMessages([]);
-    setLiveMessages([]);
-    setNextCursor(null);
+    setMessages([]);
     loadConversation();
     loadMessages();
 
@@ -264,44 +258,19 @@ const ChatScreen = () => {
     if (!conversationId) return;
     try {
       setIsLoading(true);
-      setNextCursor(null);
       const data = await apiService.getMessages(conversationId);
       if (data && Array.isArray(data.messages)) {
         const deduped = dedupeMessages(data.messages);
-        setHistoryMessages(deduped);
-        setNextCursor(data.nextCursor ?? null);
+        setMessages(deduped);
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
-        setHistoryMessages([]);
-        setNextCursor(null);
+        setMessages([]);
       }
     } catch (error: any) {
       Alert.alert('Erreur', 'Impossible de charger les messages.');
-      setNextCursor(null);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadOlderMessages = async () => {
-    if (!conversationId || !nextCursor || isLoadingOlder) return;
-    try {
-      setIsLoadingOlder(true);
-      const data = await apiService.getMessages(conversationId, nextCursor);
-      if (data && Array.isArray(data.messages)) {
-        if (data.messages.length > 0) {
-          setHistoryMessages((prev) => dedupeMessages([...data.messages, ...prev]));
-        }
-        setNextCursor(data.nextCursor ?? null);
-      } else {
-        setNextCursor(null);
-      }
-    } catch (error: any) {
-      console.error('Erreur lors du chargement des anciens messages', error);
-      Alert.alert('Erreur', 'Impossible de charger les messages précédents.');
-    } finally {
-      setIsLoadingOlder(false);
     }
   };
 
@@ -331,7 +300,7 @@ const ChatScreen = () => {
     };
 
     // Add message to local state immediately
-    setLiveMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
+    setMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
 
     try {
       const response = await apiService.sendTextMessage({
@@ -344,7 +313,7 @@ const ChatScreen = () => {
     } catch (error: any) {
       Alert.alert('Erreur', 'Envoi du message impossible.');
       // Remove optimistic message on error
-      setLiveMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       setInputText(messageText);
     } finally {
       setIsSending(false);
@@ -442,11 +411,6 @@ const ChatScreen = () => {
     }
   }, [conversation?.id, conversation?.otherUser?.photoUrl, revealProgress.revealLevel]);
 
-  const combinedMessages = useMemo(
-    () => [...liveMessages, ...historyMessages],
-    [historyMessages, liveMessages]
-  );
-
   const renderMessage = ({ item }: { item: Message }) => {
     if (item.type === 'SYSTEM') {
       return (
@@ -474,27 +438,6 @@ const ChatScreen = () => {
           })}
         </Text>
       </View>
-    );
-  };
-
-  const renderListHeader = () => {
-    if (isLoadingOlder) {
-      return (
-        <View style={styles.loadMoreContainer}>
-          <ActivityIndicator size="small" color={Colors.textSecondary} />
-          <Text style={styles.loadMoreText}>Chargement des messages précédents...</Text>
-        </View>
-      );
-    }
-
-    if (!nextCursor) {
-      return null;
-    }
-
-    return (
-      <TouchableOpacity style={styles.loadMoreButton} onPress={loadOlderMessages} activeOpacity={0.85}>
-        <Text style={styles.loadMoreText}>Voir les messages précédents</Text>
-      </TouchableOpacity>
     );
   };
 
@@ -571,12 +514,10 @@ const ChatScreen = () => {
 
         <FlatList
           ref={flatListRef}
-          data={combinedMessages}
+          data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderListHeader}
           contentContainerStyle={styles.messagesList}
-          inverted
           windowSize={5}
           maxToRenderPerBatch={10}
           removeClippedSubviews
@@ -694,19 +635,6 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     padding: Spacing.lg,
-  },
-  loadMoreButton: {
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-  loadMoreContainer: {
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-  loadMoreText: {
-    fontSize: Typography.sm,
-    fontFamily: Typography.fontSans,
-    color: Colors.textSecondary,
   },
   systemMessageContainer: {
     alignSelf: 'center',
