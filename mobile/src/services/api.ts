@@ -118,22 +118,20 @@ class ApiService {
     return response.data.data;
   }
 
-  async getMessages(conversationId: string, cursor?: string, limit: number = 50): Promise<MessagePage> {
-    const response = await this.api.get<{ success: boolean; data: MessagePage }>(
-      `/api/conversations/${conversationId}/messages`,
-      {
-        params: {
-          limit,
-          ...(cursor ? { cursor } : {}),
-        },
-      }
-    );
+  async getMessages(conversationId: string, before?: string, limit: number = 50): Promise<MessagePage> {
+    const response = await this.api.get<{ success: boolean; data: MessagePage }>('/api/messages', {
+      params: {
+        conversationId,
+        limit,
+        ...(before ? { before } : {}),
+      },
+    });
     return response.data.data;
   }
 
   // Messages
   async sendTextMessage(data: MessageRequest): Promise<MessageEnvelope> {
-    const response = await this.api.post<{ success: boolean; data: MessageEnvelope }>('/api/messages/text', data);
+    const response = await this.api.post<{ success: boolean; data: MessageEnvelope }>('/api/messages', data);
     return response.data.data;
   }
 }

@@ -7,8 +7,6 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import { AppStackParamList } from '../navigation';
 import { getRevealChapter } from '../utils/reveal';
 import apiService from '../services/api';
-import socketService from '../services/socket';
-import { Message, MessageEnvelope } from '../types';
 
 type MatchProfileRouteProp = RouteProp<AppStackParamList, 'MatchProfile'>;
 
@@ -46,20 +44,6 @@ const MatchProfileScreen = () => {
   useEffect(() => {
     conversationIdRef.current = conversationId;
   }, [conversationId]);
-
-  useEffect(() => {
-    const handleIncoming = (payload: MessageEnvelope | { message: Message } | Message) => {
-      const activeConversationId = conversationIdRef.current;
-      if (!activeConversationId) return;
-      const incoming = 'message' in payload ? payload.message : payload;
-      if (incoming?.conversationId !== activeConversationId) return;
-      if ('revealLevel' in payload && payload.revealLevel !== undefined) {
-        setRevealLevel(payload.revealLevel);
-      }
-    };
-    socketService.onNewMessage(handleIncoming);
-    return () => socketService.offNewMessage(handleIncoming);
-  }, []);
 
   const ageLabel = typeof profileUser.age === 'number' ? profileUser.age : 'Âge inconnu';
   const cityLabel = profileUser.city || 'Ville inconnue';

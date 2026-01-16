@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService from '../services/api';
-import socketService from '../services/socket';
 import { User, LoginRequest, RegisterRequest } from '../types';
 
 interface AuthContextType {
@@ -27,15 +26,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     loadToken();
   }, []);
-
-  // Connect socket when token changes
-  useEffect(() => {
-    if (token) {
-      socketService.connect(token);
-    } else {
-      socketService.disconnect();
-    }
-  }, [token]);
 
   // Clear authentication state when token is invalid
   const clearAuthState = async () => {
@@ -86,7 +76,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     apiService.setToken(null);
     setUser(null);
-    socketService.disconnect();
   };
 
   const refreshUser = async () => {
