@@ -38,6 +38,21 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
   return time;
 };
 
+const MAX_MESSAGES = 50;
+const PREVIOUS_PAGE_SIZE = 20;
+
+const MessageItem = React.memo(({ message, isOwn }: { message: Message; isOwn: boolean }) => (
+  <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
+    <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>{message.content || ''}</Text>
+    <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
+      {new Date(message.createdAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}
+    </Text>
+  </View>
+));
+
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();
   const { conversationId: routeConversationId, matchName, matchPhotoUrl } = route.params;
@@ -51,6 +66,8 @@ const ChatScreen = () => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPrevious, setIsLoadingPrevious] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [typingUser, setTypingUser] = useState<string | null>(null);
 
@@ -93,6 +110,35 @@ const ChatScreen = () => {
         .map(({ message }) => message);
     },
     [messageTimestampCache]
+  );
+
+  const limitMessages = useCallback((items: Message[]) => {
+    if (items.length <= MAX_MESSAGES) {
+      return items;
+    }
+    return items.slice(items.length - MAX_MESSAGES);
+  }, []);
+
+  const markHasOlder = useCallback((items: Message[]) => {
+    if (items.length > MAX_MESSAGES) {
+      setHasOlderMessages(true);
+    }
+  }, []);
+
+  const mergeOlderWithCurrent = useCallback(
+    (older: Message[], current: Message[]) => {
+      // Keep the requested older page (capped to the max window) in chronological order.
+      const cappedOlder = limitMessages(dedupeMessages(older));
+      // Preserve the newest slice of the current window to maintain recent context.
+      const remainingSpace = Math.max(MAX_MESSAGES - cappedOlder.length, 0);
+      const newestCurrent =
+        remainingSpace > 0
+          ? current.slice(Math.max(current.length - remainingSpace, 0))
+          : [];
+      // Merge back and trim to the max window, keeping chronological order.
+      return limitMessages(dedupeMessages([...cappedOlder, ...newestCurrent]));
+    },
+    [dedupeMessages, limitMessages]
   );
 
   const mergeConversationProgress = useCallback(
@@ -142,7 +188,7 @@ const ChatScreen = () => {
               msg.content === incomingMessage.content
             )
         );
-        const updatedMessages = dedupeMessages([
+        const deduped = dedupeMessages([
           ...withoutTemp,
           incomingMessage,
           ...(incomingSystem ? [incomingSystem] : []),
@@ -153,10 +199,11 @@ const ChatScreen = () => {
             textMessageCount: incomingCount,
           })
         );
-        return updatedMessages;
+        markHasOlder(deduped);
+        return limitMessages(deduped);
       });
     },
-    [dedupeMessages, mergeConversationProgress]
+    [dedupeMessages, limitMessages, markHasOlder, mergeConversationProgress]
   );
 
   const revealProgress = useMemo(
@@ -213,6 +260,8 @@ const ChatScreen = () => {
     if (!ensureConversation() || !conversationId) {
       setIsLoading(false);
       setMessages([]);
+      setHasOlderMessages(false);
+      setIsLoadingPrevious(false);
       return;
     }
 
@@ -258,21 +307,47 @@ const ChatScreen = () => {
     if (!conversationId) return;
     try {
       setIsLoading(true);
-      const data = await apiService.getMessages(conversationId);
+      const data = await apiService.getMessages(conversationId, undefined, MAX_MESSAGES);
       if (data && Array.isArray(data.messages)) {
         const deduped = dedupeMessages(data.messages);
-        setMessages(deduped);
+        setMessages(limitMessages(deduped));
+        setHasOlderMessages(Boolean(data.nextCursor));
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
         setMessages([]);
+        setHasOlderMessages(false);
       }
     } catch (error: any) {
       Alert.alert('Erreur', 'Impossible de charger les messages.');
+      setHasOlderMessages(false);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleLoadPrevious = useCallback(async () => {
+    if (!conversationId || isLoadingPrevious || messages.length === 0) return;
+    // Messages remain sorted oldest -> newest; use the oldest entry as the pagination cursor.
+    const cursor = messages[0]?.createdAt;
+    if (!cursor) return;
+
+    try {
+      setIsLoadingPrevious(true);
+      const data = await apiService.getMessages(conversationId, cursor, PREVIOUS_PAGE_SIZE);
+      if (data && Array.isArray(data.messages)) {
+        const olderMessages = dedupeMessages(data.messages);
+        setMessages(mergeOlderWithCurrent(olderMessages, messages));
+        setHasOlderMessages(Boolean(data.nextCursor));
+      } else {
+        setHasOlderMessages(false);
+      }
+    } catch (error: any) {
+      Alert.alert('Erreur', 'Impossible de charger les messages précédents.');
+    } finally {
+      setIsLoadingPrevious(false);
+    }
+  }, [conversationId, isLoadingPrevious, mergeOlderWithCurrent, messages]);
 
   const handleSend = async () => {
     if (!ensureConversation() || !conversationId) return;
@@ -300,7 +375,11 @@ const ChatScreen = () => {
     };
 
     // Add message to local state immediately
-    setMessages((prev) => dedupeMessages([...prev, optimisticMessage]));
+    setMessages((prev) => {
+      const combined = dedupeMessages([...prev, optimisticMessage]);
+      markHasOlder(combined);
+      return limitMessages(combined);
+    });
 
     try {
       const response = await apiService.sendTextMessage({
@@ -411,35 +490,38 @@ const ChatScreen = () => {
     }
   }, [conversation?.id, conversation?.otherUser?.photoUrl, revealProgress.revealLevel]);
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    if (item.type === 'SYSTEM') {
-      return (
-        <View style={styles.systemMessageContainer}>
-          <Text style={styles.systemMessageText}>{item.content || ''}</Text>
-        </View>
-      );
-    }
+  const renderMessage = useCallback(
+    ({ item }: { item: Message }) => {
+      if (item.type === 'SYSTEM') {
+        return (
+          <View style={styles.systemMessageContainer}>
+            <Text style={styles.systemMessageText}>{item.content || ''}</Text>
+          </View>
+        );
+      }
 
-    const isOwnMessage = item.senderId === user?.id;
+      return <MessageItem message={item} isOwn={item.senderId === user?.id} />;
+    },
+    [user?.id]
+  );
+
+  const renderLoadPrevious = useCallback(() => {
+    if (!hasOlderMessages) return null;
     return (
-      <View
-        style={[
-          styles.messageContainer,
-          isOwnMessage ? styles.ownMessage : styles.otherMessage,
-        ]}
+      <TouchableOpacity
+        style={styles.loadPreviousButton}
+        onPress={handleLoadPrevious}
+        disabled={isLoadingPrevious}
+        activeOpacity={0.85}
       >
-        <Text style={[styles.messageText, isOwnMessage && styles.ownMessageText]}>
-          {item.content || ''}
-        </Text>
-        <Text style={[styles.messageTime, isOwnMessage && styles.ownMessageTime]}>
-          {new Date(item.createdAt).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      </View>
+        {isLoadingPrevious ? (
+          <ActivityIndicator size="small" color={Colors.textPrimary} />
+        ) : (
+          <Text style={styles.loadPreviousText}>⬆ View previous messages</Text>
+        )}
+      </TouchableOpacity>
     );
-  };
+  }, [handleLoadPrevious, hasOlderMessages, isLoadingPrevious]);
 
   const displayName = conversation?.otherUser?.name || matchName;
   const displayInitial = displayName?.[0]?.toUpperCase() || '?';
@@ -518,9 +600,12 @@ const ChatScreen = () => {
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
+          inverted // Keep data oldest->newest while displaying newest at the bottom
           windowSize={5}
           maxToRenderPerBatch={10}
+          initialNumToRender={20}
           removeClippedSubviews
+          ListFooterComponent={renderLoadPrevious}
         />
 
         {typingUser && (
@@ -635,6 +720,22 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     padding: Spacing.lg,
+  },
+  loadPreviousButton: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderRadius: 999,
+    backgroundColor: Colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  loadPreviousText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontSans,
+    color: Colors.textPrimary,
+    fontWeight: '600',
   },
   systemMessageContainer: {
     alignSelf: 'center',
