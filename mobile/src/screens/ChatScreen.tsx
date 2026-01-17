@@ -326,14 +326,18 @@ const ChatScreen = () => {
             setHasNewMessageNotice(false);
           }
         } else {
+          console.error('Invalid messages payload received', data);
           setHasOlderMessages(false);
         }
       } catch (error: any) {
         Alert.alert('Erreur', cursor ? 'Impossible de charger les messages précédents.' : 'Impossible de charger les messages.');
       } finally {
+        if (cursor) {
+          setIsLoadingPrevious(false);
+        } else {
+          setIsFetchingLatest(false);
+        }
         setIsLoading(false);
-        setIsLoadingPrevious(false);
-        setIsFetchingLatest(false);
       }
     },
     [conversationId, dedupeMessages, limitMessages, markHasOlder, mergeOlderWithCurrent]
