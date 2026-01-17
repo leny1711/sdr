@@ -68,8 +68,14 @@ const ProfileScreen = () => {
       } else {
         // Request storage permission on Android
         if (Platform.OS === 'android') {
+          // Android 13+ (API 33+) uses READ_MEDIA_IMAGES
+          // Older versions use READ_EXTERNAL_STORAGE (declared in manifest)
+          const permission = Platform.Version >= 33 
+            ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES 
+            : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+          
           const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+            permission,
             {
               title: 'Permission Photos',
               message: 'Cette application nécessite l\'accès à vos photos.',
@@ -109,7 +115,7 @@ const ProfileScreen = () => {
           return;
         }
         const dataUrl = base64Data ? `data:${mimeType};base64,${base64Data}` : asset.uri;
-        setPhotoUrl(dataUrl || '');
+        setPhotoUrl(dataUrl || null);
       }
     } catch (error) {
       console.error('Error picking image:', error);

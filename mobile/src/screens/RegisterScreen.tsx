@@ -66,8 +66,14 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       } else {
         // Request storage permission on Android
         if (Platform.OS === 'android') {
+          // Android 13+ (API 33+) uses READ_MEDIA_IMAGES
+          // Older versions use READ_EXTERNAL_STORAGE (declared in manifest)
+          const permission = Platform.Version >= 33 
+            ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES 
+            : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+          
           const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+            permission,
             {
               title: 'Permission Photos',
               message: 'Cette application nécessite l\'accès à vos photos.',
@@ -96,9 +102,11 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
         ? await launchCamera(options)
         : await launchImageLibrary(options);
 
-      if (!result.didCancel && result.assets?.length) {
+      // Note: react-native-image-picker uses 'didCancel' vs expo-image-picker 'canceled'
+            if (!result.didCancel && result.assets?.length) {
         const asset = result.assets[0];
-        const mimeType = asset.type || 'image/jpeg';
+        // Note: react-native-image-picker uses 'type' vs expo-image-picker 'mimeType'
+                const mimeType = asset.type || 'image/jpeg';
         const base64 = asset.base64 || '';
         const sizeBytes = base64
           ? Math.ceil((base64.length * 3) / 4)
