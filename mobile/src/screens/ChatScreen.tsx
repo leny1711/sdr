@@ -326,7 +326,7 @@ const ChatScreen = () => {
             setHasNewMessageNotice(false);
           }
         } else {
-          console.error('Invalid messages payload received', data);
+          console.error('Invalid messages payload received', { conversationId, cursor, data });
           setHasOlderMessages(false);
         }
       } catch (error: any) {
