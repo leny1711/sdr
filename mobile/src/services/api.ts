@@ -119,6 +119,7 @@ class ApiService {
   }
 
   async getMessages(conversationId: string, before?: string, limit: number = 30): Promise<MessagePage> {
+    console.log('[GET /messages]', { conversationId, before, limit });
     const response = await this.api.get<{ success: boolean; data: MessagePage }>('/api/messages', {
       params: {
         conversationId,
@@ -130,9 +131,9 @@ class ApiService {
   }
 
   // Messages
-  async sendTextMessage(data: MessageRequest): Promise<MessageEnvelope> {
-    console.log('POST /messages called', { conversationId: data.conversationId });
-    const response = await this.api.post<{ success: boolean; data: MessageEnvelope }>('/api/messages', data);
+  async sendTextMessage(data: MessageRequest): Promise<Message> {
+    console.log('[POST /messages]', { conversationId: data.conversationId });
+    const response = await this.api.post<{ success: boolean; data: Message }>('/api/messages', data);
     return response.data.data;
   }
 }

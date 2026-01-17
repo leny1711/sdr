@@ -9,6 +9,8 @@ export class MessageController {
       const userId = req.user!.userId;
       const { conversationId, content } = req.body;
 
+      console.log('[POST /messages]', { conversationId, userId, contentLength: content?.length });
+
       const result = await MessageService.sendTextMessage(conversationId, userId, content);
 
       return res.status(201).json({
@@ -33,6 +35,8 @@ export class MessageController {
       const limit = parseInt(req.query.limit as string) || 30;
       // Support legacy 'cursor' param alongside the new 'before' query; retire after remaining socket-based clients migrate.
       const before = (req.query.before as string) || (req.query.cursor as string);
+
+      console.log('[GET /messages]', { conversationId, userId, limit, cursor: before });
 
       if (!conversationId || typeof conversationId !== 'string') {
         return res.status(400).json({
