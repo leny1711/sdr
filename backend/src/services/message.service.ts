@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { Message, MessageType } from '@prisma/client';
+import { emitMessageNotification } from '../sockets/gateway';
 
 export class MessageService {
   static async sendTextMessage(conversationId: string, senderId: string, content: string): Promise<{ message: Message }> {
@@ -13,6 +14,7 @@ export class MessageService {
     });
 
     console.log('[CHAT] message inserted', message.id);
+    emitMessageNotification(conversationId);
 
     return { message };
   }
@@ -40,6 +42,8 @@ export class MessageService {
         },
       },
     });
+
+    emitMessageNotification(conversationId);
 
     return message;
   }

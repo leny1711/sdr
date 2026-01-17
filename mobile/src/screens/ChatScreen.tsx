@@ -10,10 +10,13 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import apiService from '../services/api';
+import socketService from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
 import { Message, Conversation, MessageEnvelope } from '../types';
 import { AppStackParamList } from '../navigation';
@@ -37,10 +40,10 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
   return time;
 };
 
-const MAX_MESSAGES = 50;
-const PREVIOUS_PAGE_SIZE = 20;
-// Poll every 2.5s while the chat screen is focused.
-const POLL_INTERVAL_MS = 2500;
+const MAX_MESSAGES = 2000;
+const INITIAL_PAGE_SIZE = 30;
+const PREVIOUS_PAGE_SIZE = 30;
+const FETCH_THROTTLE_MS = 1200;
 
 const MessageItem = React.memo(({ message, isOwn }: { message: Message; isOwn: boolean }) => (
   <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
@@ -61,7 +64,7 @@ const ChatScreen = () => {
     typeof routeConversationId === 'string' ? routeConversationId.trim() || undefined : undefined;
   const isFocused = useIsFocused();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -70,6 +73,8 @@ const ChatScreen = () => {
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [hasNewMessageNotice, setHasNewMessageNotice] = useState(false);
+  const [isFetchingLatest, setIsFetchingLatest] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const hasLoadedOnce = useRef(false);
@@ -81,6 +86,7 @@ const ChatScreen = () => {
   const photoRefreshRef = useRef(false);
   const photoUnavailableRef = useRef(false);
   const [unlockedChapter, setUnlockedChapter] = useState<string | null>(null);
+  const lastFetchAtRef = useRef(0);
 
   useEffect(() => {
     photoUnavailableRef.current = false;
@@ -263,6 +269,9 @@ const ChatScreen = () => {
     setIsLoading(true);
     setHasOlderMessages(false);
     setIsLoadingPrevious(false);
+    setHasNewMessageNotice(false);
+    setIsFetchingLatest(false);
+    lastFetchAtRef.current = 0;
     hasLoadedOnce.current = false;
     setMessages([]);
     loadConversation();
@@ -278,44 +287,75 @@ const ChatScreen = () => {
     }
   };
 
-  const fetchLatestMessages = useCallback(async () => {
-    if (!conversationId) return;
-    try {
-      const data = await apiService.getMessages(conversationId, undefined, MAX_MESSAGES);
-      if (data && Array.isArray(data.messages)) {
-        let trimmed = false;
-        setMessages((prev) => {
-          const merged = dedupeMessages([...data.messages, ...prev]);
-          const limited = limitMessages(merged);
-          trimmed = merged.length > limited.length;
-          return limited;
-        });
-        setHasOlderMessages(Boolean(data.nextCursor) || trimmed);
-        hasLoadedOnce.current = true;
-      } else {
-        console.error('Invalid messages data received:', data);
-        Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
+  const fetchLatestMessages = useCallback(
+    async (force: boolean = false) => {
+      if (!conversationId) return;
+      const now = Date.now();
+      if (!force && (isFetchingLatest || now - lastFetchAtRef.current < FETCH_THROTTLE_MS)) {
+        return;
       }
-    } catch (_error: any) {
-      if (!hasLoadedOnce.current) {
-        Alert.alert('Erreur', 'Impossible de charger les messages.');
-      } else {
-        console.error('Impossible de rafraîchir les messages', _error);
+      lastFetchAtRef.current = now;
+      setIsFetchingLatest(true);
+      try {
+        const data = await apiService.getMessages(conversationId, undefined, INITIAL_PAGE_SIZE);
+        if (data && Array.isArray(data.messages)) {
+          let trimmed = false;
+          setMessages((prev) => {
+            const merged = dedupeMessages([...data.messages, ...prev]);
+            const limited = limitMessages(merged);
+            trimmed = merged.length > limited.length;
+            return limited;
+          });
+          setHasOlderMessages(Boolean(data.nextCursor) || trimmed);
+          hasLoadedOnce.current = true;
+          setHasNewMessageNotice(false);
+        } else {
+          console.error('Invalid messages data received:', data);
+          Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
+        }
+      } catch (_error: any) {
+        if (!hasLoadedOnce.current) {
+          Alert.alert('Erreur', 'Impossible de charger les messages.');
+        } else {
+          console.error('Impossible de rafraîchir les messages', _error);
+        }
+      } finally {
+        setIsLoading(false);
+        setIsFetchingLatest(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [conversationId, dedupeMessages, limitMessages]);
+    },
+    [conversationId, dedupeMessages, limitMessages, isFetchingLatest]
+  );
 
   useEffect(() => {
     if (!conversationId) return;
-    if (!isFocused) {
-      return;
-    }
-    fetchLatestMessages();
-    const intervalId = setInterval(fetchLatestMessages, POLL_INTERVAL_MS);
-    return () => clearInterval(intervalId);
-  }, [conversationId, fetchLatestMessages, isFocused]);
+    fetchLatestMessages(true);
+  }, [conversationId, fetchLatestMessages]);
+
+  useEffect(() => {
+    if (!token) return;
+    socketService.connect(token);
+    return () => {
+      socketService.disconnect();
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    socketService.joinConversation(conversationId);
+    return () => {
+      socketService.leaveConversation(conversationId);
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    const handleNewMessage = () => {
+      setHasNewMessageNotice(true);
+    };
+    socketService.onNewMessage(handleNewMessage);
+    return () => socketService.offNewMessage(handleNewMessage);
+  }, [conversationId]);
 
   const handleLoadPrevious = useCallback(async () => {
     if (!conversationId || isLoadingPrevious || messages.length === 0) return;
@@ -339,6 +379,21 @@ const ChatScreen = () => {
       setIsLoadingPrevious(false);
     }
   }, [conversationId, isLoadingPrevious, mergeOlderWithCurrent, messages]);
+
+  const handleShowNewMessages = useCallback(() => {
+    fetchLatestMessages();
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [fetchLatestMessages]);
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!hasNewMessageNotice) return;
+      if (event.nativeEvent.contentOffset.y <= 20) {
+        handleShowNewMessages();
+      }
+    },
+    [hasNewMessageNotice, handleShowNewMessages]
+  );
 
   const handleSend = async () => {
     if (!ensureConversation() || !conversationId) return;
@@ -567,6 +622,19 @@ const ChatScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {hasNewMessageNotice && (
+          <TouchableOpacity
+            style={styles.newMessagesBanner}
+            onPress={handleShowNewMessages}
+            disabled={isFetchingLatest}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.newMessagesText}>
+              {isFetchingLatest ? 'Mise à jour...' : 'Nouveaux messages disponibles'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -579,6 +647,8 @@ const ChatScreen = () => {
           initialNumToRender={20}
           removeClippedSubviews
           ListFooterComponent={renderLoadPrevious}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
         />
 
         <View style={styles.inputContainer}>
@@ -687,6 +757,20 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     padding: Spacing.lg,
+  },
+  newMessagesBanner: {
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 999,
+    backgroundColor: Colors.buttonPrimary,
+    marginBottom: Spacing.sm,
+  },
+  newMessagesText: {
+    color: Colors.textInverse,
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontSans,
+    fontWeight: '700',
   },
   loadPreviousButton: {
     alignSelf: 'center',

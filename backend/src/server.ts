@@ -3,6 +3,7 @@ import { Server } from 'socket.io';
 import { createApp } from './app';
 import { config } from './config/env';
 import { setupSocketHandlers } from './sockets/chat.socket';
+import { setSocketServer } from './sockets/gateway';
 import fs from 'fs';
 import path from 'path';
 
@@ -18,6 +19,7 @@ const io = new Server(httpServer, {
   },
 });
 
+setSocketServer(io);
 setupSocketHandlers(io);
 
 const uploadsDir = path.join(__dirname, '..', config.storagePath);
