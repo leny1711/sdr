@@ -311,7 +311,7 @@ const ChatScreen = () => {
             setMessages((prev) => {
               const merged = mergeOlderWithCurrent(pageMessages, prev);
               markHasOlder(merged);
-              return limitMessages(merged);
+              return merged;
             });
             setHasOlderMessages(Boolean(data.nextCursor));
           } else {
