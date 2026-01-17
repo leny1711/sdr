@@ -21,7 +21,7 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import RevealPhoto from '../components/RevealPhoto';
-import { getChapterNarrative, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
+import { calculateRevealLevel, getChapterNarrative, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 
@@ -30,16 +30,6 @@ const MAX_MESSAGES_IN_STATE = 50; // Requirement: max 50 messages in state
 const INITIAL_PAGE_SIZE = 30;
 const LOAD_MORE_PAGE_SIZE = 30;
 const FETCH_THROTTLE_MS = 2000; // Requirement: max 1 GET request every 2000ms
-
-// Helper function to compute reveal level from message count
-const computeRevealLevel = (textMessageCount: number): number => {
-  const CHAPTER_THRESHOLDS = [0, 10, 30, 60, 100];
-  if (textMessageCount >= CHAPTER_THRESHOLDS[4]) return 4;
-  if (textMessageCount >= CHAPTER_THRESHOLDS[3]) return 3;
-  if (textMessageCount >= CHAPTER_THRESHOLDS[2]) return 2;
-  if (textMessageCount >= CHAPTER_THRESHOLDS[1]) return 1;
-  return 0;
-};
 
 // Memoized message item component
 const MessageItem = React.memo(({ message, isOwn }: { message: Message; isOwn: boolean }) => (
@@ -244,7 +234,7 @@ const ChatScreen = () => {
 
   // Compute reveal level locally
   const revealLevel = useMemo(
-    () => computeRevealLevel(localTextMessageCount),
+    () => calculateRevealLevel(localTextMessageCount),
     [localTextMessageCount]
   );
 
