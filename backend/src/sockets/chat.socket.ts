@@ -52,6 +52,13 @@ export const setupSocketHandlers = (io: Server) => {
 
     let lastTypingAt = 0;
     const TYPING_RATE_LIMIT_MS = 800;
+    const leaveJoinedRooms = () => {
+      for (const room of socket.rooms) {
+        if (room !== socket.id) {
+          socket.leave(room);
+        }
+      }
+    };
 
     console.log(`Client connected: ${socket.id} (User: ${socket.userId})`);
 
@@ -65,12 +72,7 @@ export const setupSocketHandlers = (io: Server) => {
 
         requireAuth();
 
-        for (const room of socket.rooms) {
-          if (room !== socket.id) {
-            socket.leave(room);
-          }
-        }
-
+        leaveJoinedRooms();
         socket.currentConversationId = conversationId;
         socket.join(conversationId);
         socket.emit('conversation:joined', { conversationId });

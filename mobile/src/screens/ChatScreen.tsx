@@ -44,6 +44,7 @@ const MAX_MESSAGES = 2000;
 const INITIAL_PAGE_SIZE = 30;
 const PREVIOUS_PAGE_SIZE = 30;
 const FETCH_THROTTLE_MS = 1200;
+const NEW_MESSAGE_SCROLL_THRESHOLD = 20;
 
 const MessageItem = React.memo(({ message, isOwn }: { message: Message; isOwn: boolean }) => (
   <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
@@ -291,9 +292,8 @@ const ChatScreen = () => {
     async (force: boolean = false) => {
       if (!conversationId) return;
       const now = Date.now();
-      if (!force && (isFetchingLatest || now - lastFetchAtRef.current < FETCH_THROTTLE_MS)) {
-        return;
-      }
+      if (isFetchingLatest) return;
+      if (!force && now - lastFetchAtRef.current < FETCH_THROTTLE_MS) return;
       lastFetchAtRef.current = now;
       setIsFetchingLatest(true);
       try {
@@ -388,7 +388,7 @@ const ChatScreen = () => {
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (!hasNewMessageNotice) return;
-      if (event.nativeEvent.contentOffset.y <= 20) {
+      if (event.nativeEvent.contentOffset.y <= NEW_MESSAGE_SCROLL_THRESHOLD) {
         handleShowNewMessages();
       }
     },
