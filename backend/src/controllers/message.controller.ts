@@ -30,7 +30,7 @@ export class MessageController {
     try {
       const userId = req.user!.userId;
       const { conversationId } = req.query;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const limit = parseInt(req.query.limit as string) || 30;
       // Support legacy 'cursor' param alongside the new 'before' query; retire after remaining socket-based clients migrate.
       const before = (req.query.before as string) || (req.query.cursor as string);
 

@@ -1,6 +1,5 @@
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL } from '../config/api';
-import { Message, MessageEnvelope } from '../types';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -52,18 +51,13 @@ class SocketService {
     this.socket?.emit('leave:conversation', { conversationId });
   }
 
-  // Send a text message
-  sendTextMessage(conversationId: string, content: string) {
-    this.socket?.emit('message:text', { conversationId, content });
-  }
-
-  // Listen for new messages
-  onNewMessage(callback: (payload: MessageEnvelope | { message: Message } | Message) => void) {
+  // Listen for new messages (notification only)
+  onNewMessage(callback: () => void) {
     this.socket?.on('message:new', callback);
   }
 
   // Remove message listener
-  offNewMessage(callback?: (payload: MessageEnvelope | { message: Message } | Message) => void) {
+  offNewMessage(callback?: () => void) {
     if (callback) {
       this.socket?.off('message:new', callback);
     } else {

@@ -118,7 +118,7 @@ class ApiService {
     return response.data.data;
   }
 
-  async getMessages(conversationId: string, before?: string, limit: number = 50): Promise<MessagePage> {
+  async getMessages(conversationId: string, before?: string, limit: number = 30): Promise<MessagePage> {
     const response = await this.api.get<{ success: boolean; data: MessagePage }>('/api/messages', {
       params: {
         conversationId,
