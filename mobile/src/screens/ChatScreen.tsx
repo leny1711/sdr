@@ -125,7 +125,7 @@ const ChatScreen = () => {
   }, []);
 
   const markHasOlder = useCallback((items: Message[]) => {
-    if (items.length > MAX_MESSAGES) {
+    if (items.length >= MAX_MESSAGES) {
       setHasOlderMessages(true);
     }
   }, []);
