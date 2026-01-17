@@ -1,13 +1,13 @@
 // API configuration for mobile app
-// ⚠️ CRITICAL: Update these URLs with your computer's IP address when on a different network
+// ⚠️ CRITICAL: Update these URLs in .env file with your computer's IP address when on a different network
 //
 // HOW TO FIND YOUR IP:
 // - Windows: Run 'ipconfig' in Command Prompt (look for IPv4 Address)
 // - Mac/Linux: Run 'ifconfig' or 'ip addr' in Terminal
 //
-// EXAMPLE: If your IP is 192.168.1.105, use:
-// export const API_URL = 'http://192.168.1.105:5000';
-// export const SOCKET_URL = 'http://192.168.1.105:5000';
+// EXAMPLE: In .env file:
+// API_URL=http://192.168.1.105:5000
+// SOCKET_URL=http://192.168.1.105:5000
 //
 // ⚠️ IMPORTANT NOTES:
 // - Android devices CANNOT use 'localhost' or '127.0.0.1'
@@ -18,6 +18,8 @@
 //
 // ALSO UPDATE: backend/.env with CORS_ORIGIN=http://YOUR_IP:5173
 
-// Default values - REPLACE WITH YOUR ACTUAL IP ADDRESS
-export const API_URL = process.env.API_URL || 'http://192.168.1.100:5000';
-export const SOCKET_URL = process.env.SOCKET_URL || 'http://192.168.1.100:5000';
+import Config from 'react-native-config';
+
+// Default values - REPLACE WITH YOUR ACTUAL IP ADDRESS IN .env
+export const API_URL = Config.API_URL || 'http://192.168.1.100:5000';
+export const SOCKET_URL = Config.SOCKET_URL || 'http://192.168.1.100:5000';
