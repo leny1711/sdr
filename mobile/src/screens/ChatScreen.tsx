@@ -21,7 +21,7 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import Screen from '../components/Screen';
 import AnimatedTextInput from '../components/AnimatedTextInput';
 import RevealPhoto from '../components/RevealPhoto';
-import { calculateRevealLevel, getChapterNarrative, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
+import { calculateRevealLevel, getRevealChapter, shouldHidePhoto } from '../utils/reveal';
 
 type ChatScreenRouteProp = RouteProp<AppStackParamList, 'Chat'>;
 
@@ -337,7 +337,7 @@ const ChatScreen = () => {
               {conversation && (
                 <View style={styles.revealInfo}>
                   <Text style={styles.revealText}>
-                    {getRevealChapter(revealLevel)} • {localTextMessageCount} messages
+                    {getRevealChapter(revealLevel)}
                   </Text>
                 </View>
               )}
