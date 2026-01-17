@@ -7,6 +7,9 @@ export const setSocketServer = (io: Server) => {
 };
 
 export const emitMessageNotification = (conversationId: string) => {
-  if (!ioInstance) return;
+  if (!ioInstance) {
+    console.warn('[socket] message notification skipped: socket server not initialized');
+    return;
+  }
   ioInstance.to(conversationId).emit('message:new');
 };

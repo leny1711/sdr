@@ -88,6 +88,7 @@ const ChatScreen = () => {
   const photoUnavailableRef = useRef(false);
   const [unlockedChapter, setUnlockedChapter] = useState<string | null>(null);
   const lastFetchAtRef = useRef(0);
+  const isFetchingLatestRef = useRef(false);
 
   useEffect(() => {
     photoUnavailableRef.current = false;
@@ -292,8 +293,9 @@ const ChatScreen = () => {
     async (force: boolean = false) => {
       if (!conversationId) return;
       const now = Date.now();
-      if (isFetchingLatest) return;
+      if (isFetchingLatestRef.current) return;
       if (!force && now - lastFetchAtRef.current < FETCH_THROTTLE_MS) return;
+      isFetchingLatestRef.current = true;
       lastFetchAtRef.current = now;
       setIsFetchingLatest(true);
       try {
@@ -322,15 +324,20 @@ const ChatScreen = () => {
       } finally {
         setIsLoading(false);
         setIsFetchingLatest(false);
+        isFetchingLatestRef.current = false;
       }
     },
-    [conversationId, dedupeMessages, limitMessages, isFetchingLatest]
+    [conversationId, dedupeMessages, limitMessages]
   );
 
   useEffect(() => {
     if (!conversationId) return;
     fetchLatestMessages(true);
   }, [conversationId, fetchLatestMessages]);
+
+  const handleIncomingNotification = useCallback(() => {
+    setHasNewMessageNotice(true);
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -350,12 +357,9 @@ const ChatScreen = () => {
 
   useEffect(() => {
     if (!conversationId) return;
-    const handleNewMessage = () => {
-      setHasNewMessageNotice(true);
-    };
-    socketService.onNewMessage(handleNewMessage);
-    return () => socketService.offNewMessage(handleNewMessage);
-  }, [conversationId]);
+    socketService.onNewMessage(handleIncomingNotification);
+    return () => socketService.offNewMessage(handleIncomingNotification);
+  }, [conversationId, handleIncomingNotification]);
 
   const handleLoadPrevious = useCallback(async () => {
     if (!conversationId || isLoadingPrevious || messages.length === 0) return;
