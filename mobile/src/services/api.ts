@@ -131,6 +131,7 @@ class ApiService {
 
   // Messages
   async sendTextMessage(data: MessageRequest): Promise<MessageEnvelope> {
+    console.log('POST /messages called', { conversationId: data.conversationId });
     const response = await this.api.post<{ success: boolean; data: MessageEnvelope }>('/api/messages', data);
     return response.data.data;
   }

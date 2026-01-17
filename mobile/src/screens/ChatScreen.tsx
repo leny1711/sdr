@@ -10,8 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
+  RefreshControl,
 } from 'react-native';
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,11 +39,10 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
   return time;
 };
 
-const MAX_MESSAGES = 2000;
+const MAX_MESSAGES = 50;
 const INITIAL_PAGE_SIZE = 30;
 const PREVIOUS_PAGE_SIZE = 30;
-const FETCH_THROTTLE_MS = 1200;
-const NEW_MESSAGE_SCROLL_THRESHOLD = 20;
+const FETCH_THROTTLE_MS = 2000;
 
 const MessageItem = React.memo(({ message, isOwn }: { message: Message; isOwn: boolean }) => (
   <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
@@ -88,7 +86,6 @@ const ChatScreen = () => {
   const photoUnavailableRef = useRef(false);
   const [unlockedChapter, setUnlockedChapter] = useState<string | null>(null);
   const lastFetchAtRef = useRef(0);
-  const isFetchingLatestRef = useRef(false);
 
   useEffect(() => {
     photoUnavailableRef.current = false;
@@ -128,7 +125,7 @@ const ChatScreen = () => {
   }, []);
 
   const markHasOlder = useCallback((items: Message[]) => {
-    if (items.length > MAX_MESSAGES) {
+    if (items.length >= MAX_MESSAGES) {
       setHasOlderMessages(true);
     }
   }, []);
@@ -272,7 +269,6 @@ const ChatScreen = () => {
     setHasOlderMessages(false);
     setIsLoadingPrevious(false);
     setHasNewMessageNotice(false);
-    setIsFetchingLatest(false);
     lastFetchAtRef.current = 0;
     hasLoadedOnce.current = false;
     setMessages([]);
@@ -286,54 +282,66 @@ const ChatScreen = () => {
       setConversation(data);
     } catch (error: any) {
       Alert.alert('Erreur', 'Impossible de charger la conversation.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const fetchLatestMessages = useCallback(
-    async (force: boolean = false) => {
+  const fetchMessagesPage = useCallback(
+    async (cursor?: string) => {
       if (!conversationId) return;
       const now = Date.now();
-      if (isFetchingLatestRef.current) return;
-      if (!force && now - lastFetchAtRef.current < FETCH_THROTTLE_MS) return;
-      isFetchingLatestRef.current = true;
+      if (now - lastFetchAtRef.current < FETCH_THROTTLE_MS) {
+        console.log('fetchMessagesPage ignored (throttled)', { conversationId, cursor, elapsed: now - lastFetchAtRef.current });
+        return;
+      }
       lastFetchAtRef.current = now;
-      setIsFetchingLatest(true);
+      console.log('fetchMessagesPage called', { conversationId, cursor });
+      const limit = cursor ? PREVIOUS_PAGE_SIZE : INITIAL_PAGE_SIZE;
+      if (cursor) {
+        setIsLoadingPrevious(true);
+      } else {
+        setIsFetchingLatest(true);
+      }
       try {
-        const data = await apiService.getMessages(conversationId, undefined, INITIAL_PAGE_SIZE);
+        const data = await apiService.getMessages(conversationId, cursor, limit);
         if (data && Array.isArray(data.messages)) {
-          let trimmed = false;
-          setMessages((prev) => {
-            const merged = dedupeMessages([...data.messages, ...prev]);
-            const limited = limitMessages(merged);
-            trimmed = merged.length > limited.length;
-            return limited;
-          });
-          setHasOlderMessages(Boolean(data.nextCursor) || trimmed);
-          hasLoadedOnce.current = true;
-          setHasNewMessageNotice(false);
+          const pageMessages = dedupeMessages(data.messages);
+          if (cursor) {
+            setMessages((prev) => {
+              const merged = mergeOlderWithCurrent(pageMessages, prev);
+              markHasOlder(merged);
+              return merged;
+            });
+            setHasOlderMessages(Boolean(data.nextCursor));
+          } else {
+            setMessages((prev) => {
+              const merged = dedupeMessages([...pageMessages, ...prev]);
+              const limited = limitMessages(merged);
+              markHasOlder(limited);
+              return limited;
+            });
+            setHasOlderMessages(Boolean(data.nextCursor));
+            hasLoadedOnce.current = true;
+            setHasNewMessageNotice(false);
+          }
         } else {
-          console.error('Invalid messages data received:', data);
-          Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
+          console.error('Invalid messages payload received', { conversationId, cursor, data });
+          setHasOlderMessages(false);
         }
-      } catch (_error: any) {
-        if (!hasLoadedOnce.current) {
-          Alert.alert('Erreur', 'Impossible de charger les messages.');
-        } else {
-          console.error('Impossible de rafraîchir les messages', _error);
-        }
+      } catch (error: any) {
+        Alert.alert('Erreur', cursor ? 'Impossible de charger les messages précédents.' : 'Impossible de charger les messages.');
       } finally {
+        if (cursor) {
+          setIsLoadingPrevious(false);
+        } else {
+          setIsFetchingLatest(false);
+        }
         setIsLoading(false);
-        setIsFetchingLatest(false);
-        isFetchingLatestRef.current = false;
       }
     },
-    [conversationId, dedupeMessages, limitMessages]
+    [conversationId, dedupeMessages, limitMessages, markHasOlder, mergeOlderWithCurrent]
   );
-
-  useEffect(() => {
-    if (!conversationId) return;
-    fetchLatestMessages(true);
-  }, [conversationId, fetchLatestMessages]);
 
   const handleIncomingNotification = useCallback(() => {
     setHasNewMessageNotice(true);
@@ -366,38 +374,17 @@ const ChatScreen = () => {
     // Messages remain sorted oldest -> newest; use the oldest entry as the pagination cursor.
     const before = messages[0]?.createdAt;
     if (!before) return;
-
-    try {
-      setIsLoadingPrevious(true);
-      const data = await apiService.getMessages(conversationId, before, PREVIOUS_PAGE_SIZE);
-      if (data && Array.isArray(data.messages)) {
-        const olderMessages = dedupeMessages(data.messages);
-        setMessages(mergeOlderWithCurrent(olderMessages, messages));
-        setHasOlderMessages(Boolean(data.nextCursor));
-      } else {
-        setHasOlderMessages(false);
-      }
-    } catch (error: any) {
-      Alert.alert('Erreur', 'Impossible de charger les messages précédents.');
-    } finally {
-      setIsLoadingPrevious(false);
-    }
-  }, [conversationId, isLoadingPrevious, mergeOlderWithCurrent, messages]);
+    fetchMessagesPage(before);
+  }, [conversationId, fetchMessagesPage, isLoadingPrevious, messages]);
 
   const handleShowNewMessages = useCallback(() => {
-    fetchLatestMessages(true);
+    fetchMessagesPage();
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, [fetchLatestMessages]);
+  }, [fetchMessagesPage]);
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!hasNewMessageNotice) return;
-      if (event.nativeEvent.contentOffset.y <= NEW_MESSAGE_SCROLL_THRESHOLD) {
-        handleShowNewMessages();
-      }
-    },
-    [hasNewMessageNotice, handleShowNewMessages]
-  );
+  const handleRefresh = useCallback(() => {
+    fetchMessagesPage();
+  }, [fetchMessagesPage]);
 
   const handleSend = async () => {
     if (!ensureConversation() || !conversationId) return;
@@ -639,6 +626,21 @@ const ChatScreen = () => {
           </TouchableOpacity>
         )}
 
+        {messages.length === 0 && (
+          <TouchableOpacity
+            style={styles.loadPreviousButton}
+            onPress={() => fetchMessagesPage()}
+            disabled={isFetchingLatest || isLoading}
+            activeOpacity={0.85}
+          >
+            {isFetchingLatest ? (
+              <ActivityIndicator size="small" color={Colors.textPrimary} />
+            ) : (
+              <Text style={styles.loadPreviousText}>Charger les messages</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -651,8 +653,7 @@ const ChatScreen = () => {
           initialNumToRender={20}
           removeClippedSubviews
           ListFooterComponent={renderLoadPrevious}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
+          refreshControl={<RefreshControl refreshing={isFetchingLatest} onRefresh={handleRefresh} />}
         />
 
         <View style={styles.inputContainer}>
