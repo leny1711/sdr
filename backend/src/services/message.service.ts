@@ -3,7 +3,7 @@ import { Message, MessageType } from '@prisma/client';
 import { emitMessageNotification } from '../sockets/gateway';
 
 export class MessageService {
-  static async sendTextMessage(conversationId: string, senderId: string, content: string): Promise<{ message: Message }> {
+  static async sendTextMessage(conversationId: string, senderId: string, content: string): Promise<Message> {
     const message = await prisma.message.create({
       data: {
         conversationId,
@@ -16,7 +16,7 @@ export class MessageService {
     console.log('[CHAT] message inserted', message.id);
     emitMessageNotification(conversationId);
 
-    return { message };
+    return message;
   }
 
   static async sendVoiceMessage(
