@@ -37,9 +37,10 @@ Photos unlock through genuine conversation:
 - Web Audio API
 
 ### Mobile
-- React Native (Expo)
+- React Native (CLI - NOT Expo)
 - TypeScript
-- Expo Audio/Media APIs
+- React Native Image Picker
+- React Native Config
 
 ## 📋 Features
 
@@ -83,11 +84,12 @@ sdr/
 - Node.js v18+ or v20+ (LTS recommended)
 - PostgreSQL database
 - npm
-- Java JDK 17 or 21 (for Android mobile development)
-- Expo Go app on your phone (for mobile testing)
+- Java JDK 17 (for Android mobile development)
+- Android Studio with Android SDK (for mobile development)
 
 ### Quick Start
 
+**See [REACT_NATIVE_CLI_MIGRATION.md](./REACT_NATIVE_CLI_MIGRATION.md) for complete migration guide**  
 **See [QUICK_START.md](./QUICK_START.md) for quick setup**  
 **See [PROJECT_SETUP_WINDOWS.md](./PROJECT_SETUP_WINDOWS.md) for complete Windows guide**
 
@@ -113,17 +115,21 @@ npm install
 npm run dev
 ```
 
-### Mobile Setup (Expo)
+### Mobile Setup (React Native CLI)
+
+**⚠️ IMPORTANT**: The mobile app has been migrated from Expo to React Native CLI.
 
 ```bash
 cd mobile
 npm install
 cp .env.example .env
 # Configure .env with your computer's IP address
-npx expo start
+
+# Make sure Android device is connected via USB and USB debugging is enabled
+npm run android
 ```
 
-Then scan the QR code with Expo Go app on your phone.
+**For detailed setup instructions, see [REACT_NATIVE_CLI_MIGRATION.md](./REACT_NATIVE_CLI_MIGRATION.md)**
 
 ## 📖 Development Progress
 
@@ -164,12 +170,13 @@ Then scan the QR code with Expo Go app on your phone.
 
 **Frontend is production-ready!**
 
-### ✅ STEP 3: Mobile App (Expo) - COMPLETE
-- ✅ React Native + Expo + TypeScript setup
+### ✅ STEP 3: Mobile App (React Native CLI) - COMPLETE
+- ✅ React Native CLI + TypeScript setup
+- ✅ Android and iOS native projects
 - ✅ Kindle-inspired mobile design system
 - ✅ Authentication screens (Login/Register)
 - ✅ React Navigation with Stack & Tab navigators
-- ✅ Auth context with Expo Secure Store
+- ✅ Auth context with AsyncStorage
 - ✅ Discovery/Reading screen (main feature)
 - ✅ Matches list screen
 - ✅ Real-time chat with Socket.io
@@ -181,10 +188,12 @@ Then scan the QR code with Expo Go app on your phone.
 - ✅ Mobile-optimized UI components
 - ✅ Safe area handling
 - ✅ Keyboard-aware views
-- ✅ Production build verified
-- ✅ Comprehensive documentation
+- ✅ React Native Image Picker (Camera & Gallery)
+- ✅ React Native Config for environment variables
+- ✅ Android permissions configured
+- ✅ Migration from Expo to React Native CLI complete
 
-**Mobile app is production-ready!**
+**Mobile app is production-ready and runs on physical devices via USB!**
 
 ### 🔄 Next Steps
 - STEP 4: Documentation & Finalization
