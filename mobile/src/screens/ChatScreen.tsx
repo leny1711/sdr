@@ -14,7 +14,6 @@ import {
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import apiService from '../services/api';
-import socketService from '../services/socket';
 import { useAuth } from '../contexts/AuthContext';
 import { Message, Conversation, MessageEnvelope } from '../types';
 import { AppStackParamList } from '../navigation';
@@ -40,6 +39,8 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
 
 const MAX_MESSAGES = 50;
 const PREVIOUS_PAGE_SIZE = 20;
+// Poll every 2.5s while the chat screen is focused.
+const POLL_INTERVAL_MS = 2500;
 
 const MessageItem = React.memo(({ message, isOwn }: { message: Message; isOwn: boolean }) => (
   <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
@@ -69,10 +70,9 @@ const ChatScreen = () => {
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [typingUser, setTypingUser] = useState<string | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedOnce = useRef(false);
   const messageTimestampCache = useRef(new WeakMap<Message, number>()).current;
   const sendFeedbackAnim = useRef(new Animated.Value(0)).current;
   const chapterFeedbackAnim = useRef(new Animated.Value(0)).current;
@@ -206,51 +206,6 @@ const ChatScreen = () => {
     [dedupeMessages, limitMessages, markHasOlder, mergeConversationProgress]
   );
 
-  const latestIncomingHandlerRef = useRef(applyIncomingPayload);
-  useEffect(() => {
-    latestIncomingHandlerRef.current = applyIncomingPayload;
-  }, [applyIncomingPayload]);
-
-  const userIdRef = useRef(user?.id);
-  useEffect(() => {
-    userIdRef.current = user?.id;
-  }, [user?.id]);
-
-  const conversationIdRef = useRef(conversationId);
-  useEffect(() => {
-    conversationIdRef.current = conversationId;
-  }, [conversationId]);
-
-  useEffect(() => {
-    const handleNewMessage = (payload: MessageEnvelope | { message: Message } | Message) => {
-      const incoming = 'message' in payload ? payload.message : payload;
-      const activeConversationId = conversationIdRef.current;
-      const incomingConversationId = incoming?.conversationId;
-
-      if (!activeConversationId || incomingConversationId !== activeConversationId) {
-        return;
-      }
-
-      latestIncomingHandlerRef.current(payload);
-    };
-
-    const handleTyping = (data: { userId: string; isTyping: boolean }) => {
-      const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
-      if (!userId || userId === userIdRef.current) {
-        return;
-      }
-      setTypingUser(data.isTyping ? userId : null);
-    };
-
-    socketService.onNewMessage(handleNewMessage);
-    socketService.onUserTyping(handleTyping);
-
-    return () => {
-      socketService.offNewMessage(handleNewMessage);
-      socketService.offUserTyping(handleTyping);
-    };
-  }, []);
-
   const revealProgress = useMemo(
     () => ({
       textMessageCount: conversation?.textMessageCount ?? 0,
@@ -298,28 +253,19 @@ const ChatScreen = () => {
 
   useEffect(() => {
     if (!ensureConversation() || !conversationId) {
-      setTypingUser(null);
-      setIsLoading(false);
       setMessages([]);
       setHasOlderMessages(false);
       setIsLoadingPrevious(false);
+      setIsLoading(false);
       return;
     }
 
-    setTypingUser(null);
-
+    setIsLoading(true);
+    setHasOlderMessages(false);
+    setIsLoadingPrevious(false);
+    hasLoadedOnce.current = false;
     setMessages([]);
     loadConversation();
-    loadMessages();
-
-    // Join conversation room
-    socketService.joinConversation(conversationId);
-
-    return () => {
-      if (conversationId) {
-        socketService.leaveConversation(conversationId);
-      }
-    };
   }, [conversationId]);
 
   const loadConversation = async () => {
@@ -332,38 +278,54 @@ const ChatScreen = () => {
     }
   };
 
-  const loadMessages = async () => {
+  const fetchLatestMessages = useCallback(async () => {
     if (!conversationId) return;
     try {
-      setIsLoading(true);
       const data = await apiService.getMessages(conversationId, undefined, MAX_MESSAGES);
       if (data && Array.isArray(data.messages)) {
-        const deduped = dedupeMessages(data.messages);
-        setMessages(limitMessages(deduped));
-        setHasOlderMessages(Boolean(data.nextCursor));
+        let trimmed = false;
+        setMessages((prev) => {
+          const merged = dedupeMessages([...data.messages, ...prev]);
+          const limited = limitMessages(merged);
+          trimmed = merged.length > limited.length;
+          return limited;
+        });
+        setHasOlderMessages(Boolean(data.nextCursor) || trimmed);
+        hasLoadedOnce.current = true;
       } else {
         console.error('Invalid messages data received:', data);
         Alert.alert('Erreur', 'Impossible de charger les messages (format invalide).');
-        setMessages([]);
-        setHasOlderMessages(false);
       }
-    } catch (error: any) {
-      Alert.alert('Erreur', 'Impossible de charger les messages.');
-      setHasOlderMessages(false);
+    } catch (_error: any) {
+      if (!hasLoadedOnce.current) {
+        Alert.alert('Erreur', 'Impossible de charger les messages.');
+      } else {
+        console.error('Impossible de rafraîchir les messages', _error);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [conversationId, dedupeMessages, limitMessages]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    if (!isFocused) {
+      return;
+    }
+    fetchLatestMessages();
+    const intervalId = setInterval(fetchLatestMessages, POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+  }, [conversationId, fetchLatestMessages, isFocused]);
 
   const handleLoadPrevious = useCallback(async () => {
     if (!conversationId || isLoadingPrevious || messages.length === 0) return;
     // Messages remain sorted oldest -> newest; use the oldest entry as the pagination cursor.
-    const cursor = messages[0]?.createdAt;
-    if (!cursor) return;
+    const before = messages[0]?.createdAt;
+    if (!before) return;
 
     try {
       setIsLoadingPrevious(true);
-      const data = await apiService.getMessages(conversationId, cursor, PREVIOUS_PAGE_SIZE);
+      const data = await apiService.getMessages(conversationId, before, PREVIOUS_PAGE_SIZE);
       if (data && Array.isArray(data.messages)) {
         const olderMessages = dedupeMessages(data.messages);
         setMessages(mergeOlderWithCurrent(olderMessages, messages));
@@ -430,24 +392,6 @@ const ChatScreen = () => {
 
   const handleInputChange = (text: string) => {
     setInputText(text);
-    if (!ensureConversation() || !conversationId) return;
-
-    // Send typing indicator
-    if (text.length > 0) {
-      socketService.startTyping(conversationId);
-
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      // Stop typing after 3 seconds of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        socketService.stopTyping(conversationId);
-      }, 3000);
-    } else {
-      socketService.stopTyping(conversationId);
-    }
   };
 
   useEffect(() => {
@@ -636,12 +580,6 @@ const ChatScreen = () => {
           removeClippedSubviews
           ListFooterComponent={renderLoadPrevious}
         />
-
-        {typingUser && (
-          <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>{displayName} écrit...</Text>
-          </View>
-        )}
 
         <View style={styles.inputContainer}>
           <AnimatedTextInput
