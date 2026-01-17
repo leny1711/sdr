@@ -39,7 +39,7 @@ const getMessageTimestamp = (message: Message, cache: WeakMap<Message, number>) 
   return time;
 };
 
-const MAX_MESSAGES = 50;
+const MAX_MESSAGES = 100;
 const INITIAL_PAGE_SIZE = 30;
 const PREVIOUS_PAGE_SIZE = 30;
 const FETCH_THROTTLE_MS = 2000;
