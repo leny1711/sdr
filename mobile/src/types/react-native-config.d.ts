@@ -1,9 +1,9 @@
 declare module 'react-native-config' {
-  export interface NativeConfig {
+  export interface ReactNativeConfig {
     API_URL?: string;
     SOCKET_URL?: string;
   }
 
-  export const Config: NativeConfig;
+  export const Config: ReactNativeConfig;
   export default Config;
 }
