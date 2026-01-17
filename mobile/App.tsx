@@ -1,6 +1,5 @@
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet } from 'react-native';
+import { StatusBar, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { MatchFeedbackProvider } from './src/contexts/MatchFeedbackContext';
@@ -13,7 +12,7 @@ export default function App() {
       <SafeAreaProvider>
         <MatchFeedbackProvider>
           <View style={styles.appShell}>
-            <StatusBar style="dark" />
+            <StatusBar barStyle="dark-content" backgroundColor={Colors.bgPrimary} />
             <Navigation />
           </View>
         </MatchFeedbackProvider>

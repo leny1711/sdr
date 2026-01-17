@@ -10,9 +10,10 @@ import {
   ScrollView,
   Alert,
   Image,
+  PermissionsAndroid,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthStackParamList } from '../navigation';
 import { Colors, Typography, Spacing } from '../constants/theme';
@@ -43,35 +44,61 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const handlePickImage = async (fromCamera = false) => {
     setIsPickingImage(true);
     try {
-      const permission = fromCamera
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (permission.status !== 'granted') {
-        Alert.alert(
-          'Autorisation requise',
-          'Merci d’autoriser l’accès à vos photos pour ajouter une image de profil.'
-        );
-        return;
+      if (fromCamera) {
+        // Request camera permission on Android
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            {
+              title: 'Permission Caméra',
+              message: 'Cette application nécessite l\'accès à votre caméra.',
+              buttonPositive: 'OK',
+            }
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            Alert.alert(
+              'Autorisation requise',
+              'Merci d\'autoriser l\'accès à la caméra pour prendre une photo.'
+            );
+            return;
+          }
+        }
+      } else {
+        // Request storage permission on Android
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+            {
+              title: 'Permission Photos',
+              message: 'Cette application nécessite l\'accès à vos photos.',
+              buttonPositive: 'OK',
+            }
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            Alert.alert(
+              'Autorisation requise',
+              'Merci d\'autoriser l\'accès à vos photos pour ajouter une image de profil.'
+            );
+            return;
+          }
+        }
       }
 
-      const result = fromCamera
-        ? await ImagePicker.launchCameraAsync({
-            quality: 0.6,
-            base64: true,
-            allowsEditing: true,
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            quality: 0.6,
-            base64: true,
-            allowsEditing: true,
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          });
+      const options = {
+        mediaType: 'photo' as const,
+        quality: 0.6 as const,
+        includeBase64: true,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      };
 
-      if (!result.canceled && result.assets?.length) {
+      const result = fromCamera
+        ? await launchCamera(options)
+        : await launchImageLibrary(options);
+
+      if (!result.didCancel && result.assets?.length) {
         const asset = result.assets[0];
-        const mimeType = asset.mimeType || 'image/jpeg';
+        const mimeType = asset.type || 'image/jpeg';
         const base64 = asset.base64 || '';
         const sizeBytes = base64
           ? Math.ceil((base64.length * 3) / 4)
@@ -84,6 +111,9 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
         const dataUrl = base64 ? `data:${mimeType};base64,${base64}` : asset.uri;
         setPhotoUrl(dataUrl || '');
       }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la sélection de l\'image.');
     } finally {
       setIsPickingImage(false);
     }
