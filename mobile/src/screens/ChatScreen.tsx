@@ -385,7 +385,7 @@ const ChatScreen = () => {
   }, [conversationId, isLoadingPrevious, mergeOlderWithCurrent, messages]);
 
   const handleShowNewMessages = useCallback(() => {
-    fetchLatestMessages();
+    fetchLatestMessages(true);
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, [fetchLatestMessages]);
 
